@@ -967,7 +967,7 @@
     });
 
     // 4B. OCEAN / RIVER WATER PLANE (Clear Turquoise in 1944 vs High-Contrast Cobalt Blue in 24h Flood!)
-    const waterGeo = new THREE.PlaneGeometry(WORLD_W * 10, WORLD_D * 10);
+    const waterGeo = new THREE.PlaneGeometry(WORLD_W * 1.55, WORLD_D * 1.55);
     waterGeo.rotateX(-Math.PI / 2);
     const waterMat = new THREE.MeshLambertMaterial({
       color: 0x0b85ad,
