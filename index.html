@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>A Ilha Perdida — Diorama 3D do Rio Paraíba do Sul (Geografia 7º Ano)</title>
+  <title>A Ilha Perdida — Mapa Isométrico Dinâmico 20x15 (Geografia 7º Ano)</title>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,85 +15,102 @@
       margin: 0; padding: 0; width: 100%; height: 100%;
       overflow: hidden;
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(145deg, #e2f1e8 0%, #cce3de 52%, #b8d8d8 100%);
+      background: radial-gradient(circle at 50% 45%, #1e6091 0%, #113f67 60%, #0b2545 100%);
       color: #0f172a;
     }
     .font-display { font-family: 'Fredoka', 'Inter', sans-serif; }
     .clean-card {
-      background: rgba(255, 255, 255, 0.92);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
+      background: rgba(255, 255, 255, 0.93);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border: 1px solid rgba(15, 23, 42, 0.09);
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
     }
     .clean-pill {
       background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(8px);
       border: 1px solid rgba(15, 23, 42, 0.1);
-      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.1);
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.14);
     }
     .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
     .custom-scroll::-webkit-scrollbar-track { background: transparent; }
     .custom-scroll::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.35); border-radius: 8px; }
     input[type="range"] { accent-color: #0284c7; }
 
-    /* Teardrop 3D Map Pins (like reference image_5c91df.jpg) */
+    /* Compact Non-Overlapping Map Pins (Treasure-Island / Board Style) */
     .map-pin {
       position: absolute;
       transform: translate(-50%, -100%);
       cursor: pointer;
-      transition: transform 0.15s ease, filter 0.15s ease;
+      transition: transform 0.12s ease;
       z-index: 15;
+      pointer-events: auto;
     }
     .map-pin:hover, .map-pin.active-pin {
-      transform: translate(-50%, -108%) scale(1.14);
-      z-index: 25;
-      filter: drop-shadow(0 8px 14px rgba(15,23,42,0.28));
+      transform: translate(-50%, -106%) scale(1.12);
+      z-index: 30;
     }
-    .pin-teardrop {
-      width: 36px;
-      height: 36px;
-      border-radius: 50% 50% 50% 0;
-      transform: rotate(-45deg);
-      display: flex;
+    .pin-badge {
+      display: inline-flex;
       align-items: center;
-      justify-content: center;
-      border: 2.5px solid #ffffff;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.22);
+      gap: 4px;
+      padding: 2px 7px;
+      border-radius: 7px;
+      font-size: 10px;
+      font-weight: 800;
+      color: #ffffff;
+      border: 1.5px solid rgba(255, 255, 255, 0.92);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
+      white-space: nowrap;
+      letter-spacing: 0.01em;
     }
-    .pin-teardrop > span {
-      transform: rotate(45deg);
-      font-size: 16px;
-      line-height: 1;
+    .map-pin.active-pin .pin-badge {
+      border-color: #fde047;
+      box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.45), 0 6px 14px rgba(0,0,0,0.35);
+    }
+    .pin-stem {
+      width: 2px;
+      height: 10px;
+      background: #ffffff;
+      margin: 0 auto;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+    .pin-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 2px solid #0f172a;
+      margin: -2px auto 0;
     }
   </style>
 </head>
 <body class="relative w-full h-full overflow-hidden">
 
-  <!-- 3D WEBGL DIORAMA CANVAS -->
+  <!-- 3D WEBGL DIORAMA CANVAS (Ultra-Light 60fps Instanced Renderer) -->
   <div id="webglContainer" class="absolute inset-0 w-full h-full"></div>
-  <!-- 2D HUD OVERLAY CANVAS (Grid labels A-H / 1-8, Swipe Curtain Line, Ruler, Rain Streaks) -->
+  <!-- 2D HUD OVERLAY CANVAS (20x15 Grid A-T / 1-15, Swipe Line, Compass, Ruler) -->
   <canvas id="isoMapCanvas" class="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"></canvas>
-  <!-- HTML TEARDROP PINS LAYER -->
+  <!-- HTML ANTI-OVERLAP PINS LAYER -->
   <div id="pinsContainer" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
 
   <!-- ===================================================================== -->
   <!-- 1. CLEAN TOP BAR (Title + 3 Big Scenario Buttons + Help & Sound)       -->
   <!-- ===================================================================== -->
-  <header class="fixed top-3 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+  <header class="fixed top-2.5 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
     
-    <!-- Left: Clean Title Badge (inspired by Imostitate / Scribble Maps badge) -->
-    <div class="clean-pill rounded-2xl px-3.5 py-2 flex items-center gap-2.5 pointer-events-auto">
-      <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-lg shadow-sm font-bold">
-        🏞️
+    <!-- Left: Clean Title Badge -->
+    <div class="clean-pill rounded-2xl px-3 py-1.5 flex items-center gap-2.5 pointer-events-auto">
+      <div class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-base shadow-sm font-bold">
+        🏝️
       </div>
       <div>
         <div class="flex items-center gap-1.5">
           <span class="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded-full bg-emerald-100 text-emerald-800">Geografia 7º Ano</span>
-          <span class="text-[11px] text-slate-500 font-medium hidden sm:inline">Vale do Rio Paraíba do Sul (Taubaté)</span>
+          <span class="text-[11px] text-slate-500 font-medium hidden sm:inline">Matriz 20×15 • Rio, Várzea, Colinas e Mar</span>
         </div>
         <h1 class="font-display text-sm sm:text-base font-bold text-slate-900 leading-tight">
-          A Ilha Perdida <span class="text-emerald-700 font-normal text-xs">— Diorama Fluvial 3D</span>
+          A Ilha Perdida <span class="text-emerald-700 font-normal text-xs">— Mapa Dinâmico Interativo</span>
         </h1>
       </div>
     </div>
@@ -107,16 +124,16 @@
         <span>🌓</span> <span>Comparar (Swipe)</span>
       </button>
       <button id="btnModeExtreme" type="button" class="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-all flex items-center gap-1.5">
-        <span>⛈️</span> <span class="hidden md:inline">Evento Extremo</span><span>(24h)</span>
+        <span>🌊</span> <span class="hidden md:inline">Evento Extremo</span><span>(24h)</span>
       </button>
     </div>
 
-    <!-- Right: Sound + Reset + Instructions Modal -->
+    <!-- Right: Sound + Instructions Modal -->
     <div class="flex items-center gap-1.5 pointer-events-auto">
-      <button id="btnToggleSound" type="button" class="clean-pill hover:bg-slate-100 text-slate-700 rounded-xl px-3 py-2 text-xs font-bold flex items-center gap-1.5 transition-all" title="Ligar/Desligar sons da água, chuva e pássaros">
+      <button id="btnToggleSound" type="button" class="clean-pill hover:bg-slate-100 text-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold flex items-center gap-1.5 transition-all" title="Ligar/Desligar sons da água, chuva e pássaros">
         <span id="soundIcon">🔊</span> <span id="soundLabel" class="hidden lg:inline">Som Ativo</span>
       </button>
-      <button id="btnOpenWelcome" type="button" class="clean-pill bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm">
+      <button id="btnOpenWelcome" type="button" class="clean-pill bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-3 py-1.5 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm">
         <span>📋</span> <span>Instruções</span>
       </button>
     </div>
@@ -125,32 +142,32 @@
   <!-- ===================================================================== -->
   <!-- 2. COMPACT COLLAPSIBLE LEFT CONTROL DRAWER (Simulator + Relief + Layers) -->
   <!-- ===================================================================== -->
-  <aside id="leftDock" class="fixed left-3 top-20 z-20 w-72 flex flex-col gap-2 pointer-events-none">
+  <aside id="leftDock" class="fixed left-3 top-16 z-20 w-68 sm:w-72 flex flex-col gap-1.5 pointer-events-none">
     <div class="flex items-center gap-1.5 pointer-events-auto">
-      <button id="btnToggleLeftDock" type="button" class="clean-pill rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 hover:bg-white flex items-center gap-1.5">
-        <span>🎛️</span> <span id="leftDockToggleText">Camadas & Simulador</span> <span id="leftDockChevron">▾</span>
+      <button id="btnToggleLeftDock" type="button" class="clean-pill rounded-xl px-2.5 py-1 text-xs font-bold text-slate-800 hover:bg-white flex items-center gap-1">
+        <span>🗂️</span> <span id="leftDockToggleText">Camadas & Simulador</span> <span id="leftDockChevron">▾</span>
       </button>
-      <button id="btnToggleRightDock" type="button" class="clean-pill rounded-xl px-3 py-1.5 text-xs font-bold text-emerald-800 hover:bg-white flex items-center gap-1.5">
-        <span>📌</span> <span id="rightDockToggleText">Legenda & Local</span> <span id="rightDockChevron">▾</span>
+      <button id="btnToggleRightDock" type="button" class="clean-pill rounded-xl px-2.5 py-1 text-xs font-bold text-emerald-800 hover:bg-white flex items-center gap-1">
+        <span>🔍</span> <span id="rightDockToggleText">Detalhes & Clima</span> <span id="rightDockChevron">▾</span>
       </button>
     </div>
 
-    <div id="leftDockContent" class="clean-card rounded-2xl p-3 flex flex-col gap-3 max-h-[62vh] overflow-y-auto custom-scroll pointer-events-auto">
+    <div id="leftDockContent" class="clean-card rounded-2xl p-2.5 flex flex-col gap-2.5 max-h-[60vh] overflow-y-auto custom-scroll pointer-events-auto">
       
       <!-- 24h Rain Simulator -->
-      <div class="rounded-xl bg-sky-50/90 border border-sky-200 p-2.5">
+      <div class="rounded-xl bg-sky-50/95 border border-sky-200 p-2.5">
         <div class="flex items-center justify-between mb-1">
           <span class="text-[11px] font-extrabold uppercase tracking-wider text-sky-900">🌧️ Chuva de 1 Mês em 24h</span>
-          <button id="btnPlaySim" type="button" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-600 hover:bg-sky-500 text-white transition-all flex items-center gap-1">
+          <button id="btnPlaySim" type="button" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-600 hover:bg-sky-500 text-white transition-all flex items-center gap-1">
             <span id="playSimIcon">▶</span> <span id="playSimText">Simular</span>
           </button>
         </div>
         <div class="flex items-center gap-2 my-1">
           <span class="text-[10px] font-bold text-emerald-700">0h</span>
           <input id="rainSlider" type="range" min="0" max="24" step="0.5" value="24" class="w-full h-1.5 rounded-lg cursor-pointer" />
-          <span class="text-[10px] font-bold text-amber-700">24h</span>
+          <span class="text-[10px] font-bold text-blue-700">24h</span>
         </div>
-        <div class="grid grid-cols-3 gap-1 text-center bg-white rounded-lg p-1.5 border border-sky-100 text-[11px]">
+        <div class="grid grid-cols-3 gap-1 text-center bg-white rounded-lg p-1 border border-sky-100 text-[10px]">
           <div>
             <div class="text-[9px] text-slate-400 uppercase font-semibold">Tempo</div>
             <div id="metricHours" class="font-extrabold text-slate-800">24,0 h</div>
@@ -160,77 +177,73 @@
             <div id="metricRainMm" class="font-extrabold text-sky-700">250 mm</div>
           </div>
           <div>
-            <div class="text-[9px] text-slate-400 uppercase font-semibold">Cheia do Rio</div>
-            <div id="metricRiverLevel" class="font-extrabold text-rose-600">+4,8 m</div>
+            <div class="text-[9px] text-slate-400 uppercase font-semibold">Cheia</div>
+            <div id="metricRiverLevel" class="font-extrabold text-blue-700">+4,5 m</div>
           </div>
         </div>
 
         <!-- Swipe Slider -->
-        <div id="swipeControlBox" class="mt-2 pt-2 border-t border-sky-200/70">
+        <div id="swipeControlBox" class="mt-2 pt-1.5 border-t border-sky-200/70">
           <div class="flex justify-between text-[10px] font-bold mb-0.5">
-            <span class="text-amber-800">⬅ Dias Atuais (24h)</span>
-            <span class="text-emerald-800">Época do Livro (1944) ➡</span>
+            <span class="text-blue-800">⬅ Cheia 24h (Azul-Cobalto)</span>
+            <span class="text-emerald-800">Normal 1944 ➡</span>
           </div>
           <input id="swipeSlider" type="range" min="5" max="95" value="50" class="w-full h-1.5 rounded-lg cursor-pointer" />
         </div>
       </div>
 
-      <!-- Vertical Exaggeration Slider (Exagero Vertical do Relevo 3D) -->
-      <div class="rounded-xl bg-amber-50/80 border border-amber-200/80 p-2.5">
-        <div class="flex items-center justify-between text-[11px] font-bold text-amber-950 mb-1">
-          <span>⛰️ Exagero Vertical (Relevo 3D)</span>
-          <span id="exagReadout" class="px-1.5 py-0.5 rounded bg-amber-200/70 text-amber-900 font-mono text-[10px]">2.2x</span>
+      <!-- Vertical Exaggeration Slider (Colinas Arredondadas & Várzea) -->
+      <div class="rounded-xl bg-emerald-50/80 border border-emerald-200/80 p-2">
+        <div class="flex items-center justify-between text-[11px] font-bold text-emerald-950 mb-0.5">
+          <span>⛰️ Volume das Colinas (3D)</span>
+          <span id="exagReadout" class="px-1.5 py-0.5 rounded bg-emerald-200/70 text-emerald-900 font-mono text-[10px]">1.8x</span>
         </div>
-        <input id="exagSlider" type="range" min="1.0" max="3.5" step="0.1" value="2.2" class="w-full h-1.5 rounded-lg cursor-pointer accent-amber-600" />
-        <div class="flex justify-between text-[9px] text-amber-800/80 mt-0.5">
-          <span>Natural (1x)</span>
-          <span>Destacar Serras e Morro (3.5x)</span>
-        </div>
+        <input id="exagSlider" type="range" min="1.0" max="3.0" step="0.1" value="1.8" class="w-full h-1.5 rounded-lg cursor-pointer accent-emerald-600" />
       </div>
 
       <!-- Clean Layer Chips -->
       <div>
-        <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5">Camadas do Mapa</div>
-        <div class="grid grid-cols-2 gap-1.5 text-[11px]">
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-100/80 hover:bg-slate-200/70 cursor-pointer font-semibold text-slate-700">
+        <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">Camadas Cartográficas</div>
+        <div class="grid grid-cols-2 gap-1 text-[11px]">
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-100/90 hover:bg-slate-200/70 cursor-pointer font-semibold text-slate-700">
             <input id="layerForest" type="checkbox" checked class="accent-emerald-600 rounded" />
             <span>🌲 Mata Fechada</span>
           </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-100/80 hover:bg-slate-200/70 cursor-pointer font-semibold text-slate-700">
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-100/90 hover:bg-slate-200/70 cursor-pointer font-semibold text-slate-700">
             <input id="layerMarkers" type="checkbox" checked class="accent-amber-600 rounded" />
-            <span>📍 Pontos do Livro</span>
+            <span>📍 Rótulos Livro</span>
           </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-100/80 hover:bg-slate-200/70 cursor-pointer font-semibold text-slate-700">
-            <input id="layerFloodRisk" type="checkbox" checked class="accent-rose-600 rounded" />
-            <span>⚠️ Área de Risco</span>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-100/90 hover:bg-slate-200/70 cursor-pointer font-semibold text-slate-700">
+            <input id="layerFloodRisk" type="checkbox" checked class="accent-blue-600 rounded" />
+            <span>🌊 Várzea Alagável</span>
           </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-100/80 hover:bg-slate-200/70 cursor-pointer font-semibold text-slate-700">
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-100/90 hover:bg-slate-200/70 cursor-pointer font-semibold text-slate-700">
             <input id="layerRelief" type="checkbox" checked class="accent-yellow-600 rounded" />
-            <span>〰️ Curvas/Trilhas</span>
+            <span>〰️ Trilhas/Pontes</span>
           </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-100/80 hover:bg-slate-200/70 cursor-pointer font-semibold text-slate-700">
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-100/90 hover:bg-slate-200/70 cursor-pointer font-semibold text-slate-700">
             <input id="layerGrid" type="checkbox" checked class="accent-sky-600 rounded" />
-            <span>🔢 Grade A–H / 1–8</span>
+            <span>🔢 Matriz 20×15</span>
           </label>
-          <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-100/80 hover:bg-slate-200/70 cursor-pointer font-semibold text-slate-700">
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-100/90 hover:bg-slate-200/70 cursor-pointer font-semibold text-slate-700">
             <input id="layerWeather" type="checkbox" checked class="accent-indigo-600 rounded" />
-            <span>🎈 Clima & Balão</span>
+            <span>🌧️ Chuva/Barcos</span>
           </label>
         </div>
       </div>
 
-      <!-- Interactive Tools (Explore, Drag POIs, Measure Scale, Add Elements) -->
+      <!-- Interactive Tools -->
       <div class="pt-1 border-t border-slate-200">
-        <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5">Interagir no Mapa</div>
+        <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">Ferramentas</div>
         <div class="flex flex-wrap gap-1">
-          <button id="toolPan" type="button" class="px-2 py-1 rounded-lg text-[11px] font-bold bg-emerald-600 text-white">🖐️ Explorar</button>
-          <button id="toolMove" type="button" class="px-2 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">✥ Arrastar Elementos</button>
-          <button id="toolRuler" type="button" class="px-2 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">📏 Medir Escala</button>
-          <button id="stampTree" type="button" class="px-2 py-1 rounded-lg text-[11px] font-medium bg-slate-100 text-slate-700 hover:bg-slate-200">🌳 +Árvore</button>
-          <button id="stampCanoe" type="button" class="px-2 py-1 rounded-lg text-[11px] font-medium bg-slate-100 text-slate-700 hover:bg-slate-200">🛶 +Canoa</button>
-          <button id="stampCamp" type="button" class="px-2 py-1 rounded-lg text-[11px] font-medium bg-slate-100 text-slate-700 hover:bg-slate-200">🔥 +Fogueira</button>
-          <button id="stampAlert" type="button" class="px-2 py-1 rounded-lg text-[11px] font-medium bg-slate-100 text-slate-700 hover:bg-slate-200">⚠️ +Alerta</button>
-          <button id="btnResetMap" type="button" class="px-2 py-1 rounded-lg text-[11px] font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100">↺ Resetar</button>
+          <button id="toolPan" type="button" class="px-2 py-1 rounded-lg text-[10px] font-bold bg-emerald-600 text-white">🖐️ Explorar</button>
+          <button id="toolMove" type="button" class="px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">✥ Arrastar Elementos</button>
+          <button id="toolRuler" type="button" class="px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">📏 Medir Escala</button>
+          <button id="stampTree" type="button" class="px-2 py-1 rounded-lg text-[10px] font-medium bg-slate-100 text-slate-700 hover:bg-slate-200">🌳 +Árvore</button>
+          <button id="stampCanoe" type="button" class="px-2 py-1 rounded-lg text-[10px] font-medium bg-slate-100 text-slate-700 hover:bg-slate-200">🛶 +Canoa</button>
+          <button id="stampCamp" type="button" class="px-2 py-1 rounded-lg text-[10px] font-medium bg-slate-100 text-slate-700 hover:bg-slate-200">🔥 +Fogueira</button>
+          <button id="stampAlert" type="button" class="px-2 py-1 rounded-lg text-[10px] font-medium bg-slate-100 text-slate-700 hover:bg-slate-200">⚠️ +Alerta</button>
+          <button id="btnResetMap" type="button" class="px-2 py-1 rounded-lg text-[10px] font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100">↺ Resetar</button>
         </div>
       </div>
 
@@ -240,31 +253,31 @@
   <!-- ===================================================================== -->
   <!-- 3. RIGHT COMPACT CARD: SELECTED PLACE + CARTOGRAPHIC LEGEND           -->
   <!-- ===================================================================== -->
-  <aside id="rightDock" class="fixed right-3 top-20 z-20 w-72 flex flex-col gap-2 pointer-events-none">
-    <div id="rightDockContent" class="clean-card rounded-2xl p-3 flex flex-col gap-2.5 max-h-[58vh] overflow-y-auto custom-scroll pointer-events-auto">
+  <aside id="rightDock" class="fixed right-3 top-16 z-20 w-68 sm:w-72 flex flex-col gap-1.5 pointer-events-none">
+    <div id="rightDockContent" class="clean-card rounded-2xl p-2.5 flex flex-col gap-2 max-h-[56vh] overflow-y-auto custom-scroll pointer-events-auto">
       
       <!-- Active Place Details -->
       <div class="rounded-xl bg-slate-50 border border-slate-200/90 p-2.5">
         <div class="flex items-center justify-between gap-1 mb-1">
           <span id="poiBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-900">
-            Quadrante D5 • Cota 1,8 m
+            Quadrante G12 • Cota 1,5 m
           </span>
-          <span id="poiStatusBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
+          <span id="poiStatusBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">
             🌊 Alaga em 24h
           </span>
         </div>
         <h3 id="poiTitle" class="font-display text-sm font-bold text-slate-900">
           🛶 Ponto de Desembarque da Canoa
         </h3>
-        <p id="poiDesc" class="text-[11px] text-slate-600 mt-1 leading-relaxed">
-          Praia fluvial na ponta baixa da ilha onde Henrique e Eduardo desembarcam escondidos. Quando o Rio Paraíba do Sul sobe, a correnteza leva a canoa embora.
+        <p id="poiDesc" class="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+          Praia baixa e trapiche onde Henrique e Eduardo desembarcam com a canoa. Quando o rio sobe, a correnteza arrasta a canoa para a foz!
         </p>
-        <div id="poiClimateBox" class="mt-1.5 p-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-950">
-          <strong>Mudanças Climáticas (24h):</strong> Com 250 mm de chuva em 24h, esta praia desaparece sob +4,8m de água barrenta.
+        <div id="poiClimateBox" class="mt-1.5 p-2 rounded-lg bg-blue-50 border border-blue-200 text-[10px] text-blue-950">
+          <strong>Mudanças Climáticas (24h):</strong> Com 250 mm de chuva em 24h, o rio sobe +4,5m e inunda toda a praia e a várzea.
         </div>
 
         <!-- Quick Jump Pills -->
-        <div class="flex flex-wrap gap-1 mt-2 pt-2 border-t border-slate-200">
+        <div class="flex flex-wrap gap-1 mt-2 pt-1.5 border-t border-slate-200">
           <button type="button" data-select-poi="canoe" class="poi-pill px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500 text-white">🛶 Desembarque</button>
           <button type="button" data-select-poi="simao" class="poi-pill px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-200 text-slate-700 hover:bg-slate-300">⛺ Abrigo de Simão</button>
           <button type="button" data-select-poi="forest" class="poi-pill px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-200 text-slate-700 hover:bg-slate-300">🌳 Mata Fechada</button>
@@ -273,24 +286,24 @@
         </div>
       </div>
 
-      <!-- Compact Dual-Scenario Legend (Mandatory Cartographic Requirement) -->
-      <div class="rounded-xl bg-white border border-slate-200 p-2.5 text-[11px]">
-        <div class="font-extrabold text-slate-800 uppercase tracking-wider text-[10px] mb-1.5 flex items-center justify-between">
+      <!-- Compact Dual-Scenario Legend (Clear Blue Flood Color!) -->
+      <div class="rounded-xl bg-white border border-slate-200 p-2 text-[10px]">
+        <div class="font-extrabold text-slate-800 uppercase tracking-wider mb-1 flex items-center justify-between">
           <span>🗺️ Legenda Cartográfica</span>
-          <span class="text-emerald-700 font-semibold">2 Cenários na Planta</span>
+          <span class="text-sky-700 font-semibold">Matriz 20×15</span>
         </div>
         <div class="grid grid-cols-2 gap-1.5">
           <div class="p-1.5 rounded-lg bg-emerald-50 border border-emerald-200">
-            <div class="font-bold text-emerald-900 text-[10px] mb-1">☀️ 1944 (Época do Livro)</div>
-            <div class="flex items-center gap-1 text-slate-700 text-[10px]"><span class="w-2.5 h-2.5 rounded-sm bg-[#0ea5e9] inline-block"></span> Rio Paraíba normal</div>
-            <div class="flex items-center gap-1 text-slate-700 text-[10px]"><span class="w-2.5 h-2.5 rounded-sm bg-[#fde68a] inline-block"></span> Praia e várzea seca</div>
-            <div class="flex items-center gap-1 text-slate-700 text-[10px]"><span class="w-2.5 h-2.5 rounded-sm bg-[#15803d] inline-block"></span> Mata Atlântica densa</div>
+            <div class="font-bold text-emerald-900 mb-0.5">☀️ 1944 (Normal)</div>
+            <div class="flex items-center gap-1 text-slate-700"><span class="w-2.5 h-2.5 rounded-sm bg-[#0ea5e9] inline-block"></span> Rio e Mar normais</div>
+            <div class="flex items-center gap-1 text-slate-700"><span class="w-2.5 h-2.5 rounded-sm bg-[#fde68a] inline-block"></span> Praia e Várzea seca</div>
+            <div class="flex items-center gap-1 text-slate-700"><span class="w-2.5 h-2.5 rounded-sm bg-[#4ade80] inline-block"></span> Colinas e Mata</div>
           </div>
-          <div class="p-1.5 rounded-lg bg-amber-50 border border-amber-200">
-            <div class="font-bold text-amber-900 text-[10px] mb-1">⛈️ Atual (Chuva 24h)</div>
-            <div class="flex items-center gap-1 text-slate-700 text-[10px]"><span class="w-2.5 h-2.5 rounded-sm bg-[#9a5b32] inline-block"></span> Rio barrento (+4,8m)</div>
-            <div class="flex items-center gap-1 text-slate-700 text-[10px]"><span class="w-2.5 h-2.5 rounded-sm bg-[#e11d48] inline-block"></span> Mancha de inundação</div>
-            <div class="flex items-center gap-1 text-slate-700 text-[10px]"><span class="w-2.5 h-2.5 rounded-sm bg-[#f97316] inline-block"></span> Trilha e refúgio alto</div>
+          <div class="p-1.5 rounded-lg bg-blue-50 border border-blue-200">
+            <div class="font-bold text-blue-900 mb-0.5">🌊 Cheia 24h (Atual)</div>
+            <div class="flex items-center gap-1 text-slate-700"><span class="w-2.5 h-2.5 rounded-sm bg-[#1d4ed8] inline-block"></span> Cheia (+4,5m Azul)</div>
+            <div class="flex items-center gap-1 text-slate-700"><span class="w-2.5 h-2.5 rounded-sm bg-[#38bdf8] inline-block"></span> Várzea Inundada</div>
+            <div class="flex items-center gap-1 text-slate-700"><span class="w-2.5 h-2.5 rounded-sm bg-[#f43f5e] inline-block"></span> Borda de Risco</div>
           </div>
         </div>
       </div>
@@ -301,52 +314,49 @@
   <!-- ===================================================================== -->
   <!-- 4. EASY-TO-FOLLOW 5-STEP SCHOOL PRESENTATION BAR (Bottom Center)      -->
   <!-- ===================================================================== -->
-  <div id="presentationBanner" class="fixed bottom-14 left-1/2 -translate-x-1/2 z-30 w-[95vw] max-w-3xl clean-card rounded-2xl p-3 sm:p-3.5 border-2 border-emerald-500/70 shadow-xl">
-    <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
-      <!-- 5 Numbered Step Pills (Students just click 1 -> 2 -> 3 -> 4 -> 5!) -->
+  <div id="presentationBanner" class="fixed bottom-12 left-1/2 -translate-x-1/2 z-30 w-[95vw] max-w-3xl clean-card rounded-2xl p-2.5 sm:p-3 border-2 border-emerald-500/80 shadow-xl">
+    <div class="flex flex-wrap items-center justify-between gap-1.5 mb-1">
       <div class="flex items-center gap-1 flex-wrap">
-        <span class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800 mr-1">🎤 Roteiro de Apresentação:</span>
-        <button type="button" data-step="0" class="step-pill px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white shadow-sm">1. O Rio e a Ilha</button>
-        <button type="button" data-step="1" class="step-pill px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">2. Lugares do Livro</button>
-        <button type="button" data-step="2" class="step-pill px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">3. Chuva 24h (1 Mês)</button>
-        <button type="button" data-step="3" class="step-pill px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">4. O que Muda?</button>
-        <button type="button" data-step="4" class="step-pill px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">5. Abrigo de Simão</button>
+        <span class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800 mr-1">🎤 Roteiro:</span>
+        <button type="button" data-step="0" class="step-pill px-2 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-600 text-white shadow-sm">1. Colinas, Rio e Mar</button>
+        <button type="button" data-step="1" class="step-pill px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">2. Lugares do Livro</button>
+        <button type="button" data-step="2" class="step-pill px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">3. Chuva 24h (1 Mês)</button>
+        <button type="button" data-step="3" class="step-pill px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">4. O que Muda?</button>
+        <button type="button" data-step="4" class="step-pill px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">5. Abrigo de Simão</button>
       </div>
       <div class="flex items-center gap-1">
         <span id="presStepBadge" class="hidden">Passo 1 de 5</span>
         <div id="presDots" class="hidden"></div>
-        <button id="btnPresPrev" type="button" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700">← Anterior</button>
-        <button id="btnPresNext" type="button" class="px-3 py-1 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm">Próximo Passo →</button>
-        <button id="btnClosePresentation" type="button" class="px-2 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-700" title="Minimizar roteiro">✕ Fechar Roteiro</button>
+        <button id="btnPresPrev" type="button" class="px-2 py-0.5 rounded-lg text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700">← Anterior</button>
+        <button id="btnPresNext" type="button" class="px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm">Próximo Passo →</button>
+        <button id="btnClosePresentation" type="button" class="px-2 py-0.5 rounded-lg text-[11px] font-semibold text-slate-500 hover:text-slate-800">✕ Fechar Roteiro</button>
       </div>
     </div>
 
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-emerald-50/70 rounded-xl p-2.5 border border-emerald-200/80">
-      <div>
-        <h3 id="presTitle" class="font-display text-sm sm:text-base font-bold text-slate-900">
-          1. O Vale do Rio Paraíba do Sul e a Ilha Fluvial (1944)
-        </h3>
-        <p id="presText" class="text-xs text-slate-700 mt-0.5 leading-relaxed">
-          💬 <strong>Para explicar à turma:</strong> "Aqui vemos o Rio Paraíba do Sul cortando o vale entre a Fazenda dos Padrinhos (margem esquerda) e a Serra (margem direita). No meio do rio fica a Ilha Perdida, com Escala Fictícia, Rosa dos Ventos, Legenda e Coordenadas A–H / 1–8."
-        </p>
-      </div>
+    <div class="bg-emerald-50/80 rounded-xl p-2 border border-emerald-200/80">
+      <h3 id="presTitle" class="font-display text-xs sm:text-sm font-bold text-slate-900">
+        1. Colinas Arredondadas na Montante, Várzea do Rio e Mar na Jusante
+      </h3>
+      <p id="presText" class="text-[11px] text-slate-700 mt-0.5 leading-snug">
+        💬 <strong>Para explicar à turma:</strong> "Na montante (parte alta) temos colinas verdes arredondadas de onde o Rio Paraíba do Sul desce, atravessando as áreas de várzea e dividindo-se ao redor da Ilha Perdida até desaguar no mar na jusante. A matriz 20×15 (A–T e 1–15) traz Escala Fictícia, Rosa dos Ventos e Legenda."
+      </p>
     </div>
   </div>
 
   <!-- ===================================================================== -->
-  <!-- 5. BOTTOM STATUS BAR (Scale Bar, Coordinates, Camera Zoom & Rotate)   -->
+  <!-- 5. BOTTOM STATUS BAR (Scale Bar, 20x15 Coordinates, Zoom & Rotate)    -->
   <!-- ===================================================================== -->
-  <div class="fixed bottom-2.5 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+  <div class="fixed bottom-2 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
     
     <!-- Left: Coordinates + Fictional Scale Bar -->
-    <div class="clean-pill rounded-xl px-3 py-1.5 flex flex-wrap items-center gap-3 pointer-events-auto text-xs">
+    <div class="clean-pill rounded-xl px-3 py-1 flex flex-wrap items-center gap-3 pointer-events-auto text-xs">
       <div class="flex items-center gap-1.5">
         <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-        <span class="text-slate-500">Coordenada:</span>
-        <strong id="hudCoord" class="text-sky-700 font-mono">Quadrante D5</strong>
+        <span class="text-slate-500">Matriz 20×15:</span>
+        <strong id="hudCoord" class="text-sky-700 font-mono">Quadrante J8</strong>
         <span class="text-slate-300">|</span>
         <span class="text-slate-500">Altitude:</span>
-        <strong id="hudElev" class="text-emerald-700 font-mono">12,0 m</strong>
+        <strong id="hudElev" class="text-emerald-700 font-mono">9,5 m</strong>
       </div>
 
       <!-- Fictional Scale Bar -->
@@ -354,32 +364,32 @@
         <span class="text-[10px] font-extrabold uppercase text-slate-600">Escala Fictícia:</span>
         <div class="flex flex-col items-center">
           <div class="flex">
-            <div id="scaleBarSegment1" class="h-2 bg-slate-800 border border-slate-800" style="width: 36px;"></div>
-            <div id="scaleBarSegment2" class="h-2 bg-white border border-slate-800" style="width: 36px;"></div>
+            <div id="scaleBarSegment1" class="h-1.5 bg-slate-800 border border-slate-800" style="width: 36px;"></div>
+            <div id="scaleBarSegment2" class="h-1.5 bg-white border border-slate-800" style="width: 36px;"></div>
           </div>
           <div class="w-full flex justify-between text-[9px] font-mono text-slate-600">
             <span>0</span>
-            <span id="scaleMidLabel">50m</span>
-            <span id="scaleEndLabel">100m</span>
+            <span id="scaleMidLabel">75m</span>
+            <span id="scaleEndLabel">150m</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Center: Reopen Presentation Button if minimized -->
-    <button id="btnPresentationMode" type="button" class="clean-pill bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl px-3.5 py-1.5 text-xs font-extrabold flex items-center gap-1.5 pointer-events-auto shadow-md">
-      <span>🎤</span> <span>Mostrar Roteiro de Apresentação</span>
+    <!-- Center: Reopen Presentation Button -->
+    <button id="btnPresentationMode" type="button" class="clean-pill bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl px-3 py-1 text-xs font-extrabold flex items-center gap-1.5 pointer-events-auto shadow-md">
+      <span>🎤</span> <span>Apresentar Trabalho</span>
     </button>
 
     <!-- Right: Camera Controls -->
     <div class="clean-pill rounded-xl p-1 flex items-center gap-1 pointer-events-auto">
-      <button id="btnRotateLeft" type="button" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-700 font-bold text-sm" title="Girar mapa para a esquerda">↺</button>
-      <button id="btnRotateRight" type="button" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-700 font-bold text-sm" title="Girar mapa para a direita">↻</button>
+      <button id="btnRotateLeft" type="button" class="w-6 h-6 rounded-lg hover:bg-slate-100 text-slate-700 font-bold text-xs" title="Girar para a esquerda">↺</button>
+      <button id="btnRotateRight" type="button" class="w-6 h-6 rounded-lg hover:bg-slate-100 text-slate-700 font-bold text-xs" title="Girar para a direita">↻</button>
       <div class="h-4 w-px bg-slate-200 mx-0.5"></div>
-      <button id="btnZoomOut" type="button" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-700 font-bold text-base" title="Diminuir Zoom">−</button>
-      <span id="zoomReadout" class="text-xs font-mono font-bold text-slate-700 px-1 min-w-[44px] text-center">100%</span>
-      <button id="btnZoomIn" type="button" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-700 font-bold text-base" title="Aumentar Zoom">+</button>
-      <button id="btnCenterCamera" type="button" class="px-2.5 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 ml-0.5">🎯 Centralizar</button>
+      <button id="btnZoomOut" type="button" class="w-6 h-6 rounded-lg hover:bg-slate-100 text-slate-700 font-bold text-sm" title="Diminuir Zoom">−</button>
+      <span id="zoomReadout" class="text-[11px] font-mono font-bold text-slate-700 px-1 min-w-[40px] text-center">80%</span>
+      <button id="btnZoomIn" type="button" class="w-6 h-6 rounded-lg hover:bg-slate-100 text-slate-700 font-bold text-sm" title="Aumentar Zoom">+</button>
+      <button id="btnCenterCamera" type="button" class="px-2 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-[11px] font-bold text-slate-700 ml-0.5">🎯 Centralizar</button>
     </div>
   </div>
 
@@ -389,12 +399,12 @@
   <div id="welcomeModal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 backdrop-blur-sm">
     <div class="clean-card rounded-3xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-2xl">
       
-      <div class="p-4 sm:p-5 bg-gradient-to-r from-emerald-700 to-teal-700 text-white flex items-center justify-between">
+      <div class="p-4 sm:p-5 bg-gradient-to-r from-emerald-700 to-sky-700 text-white flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <div class="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center text-2xl">🏞️</div>
+          <div class="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center text-2xl">🏝️</div>
           <div>
             <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-300 text-slate-950">Geografia • 7º Ano</span>
-            <h2 class="font-display text-lg sm:text-xl font-bold mt-0.5">A Ilha Perdida — Mapa Fluvial 3D & Mudanças Climáticas</h2>
+            <h2 class="font-display text-lg sm:text-xl font-bold mt-0.5">A Ilha Perdida — Mapa Dinâmico 20×15 & Mudanças Climáticas</h2>
           </div>
         </div>
         <button id="btnCloseModalTop" type="button" class="w-8 h-8 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold">✕</button>
@@ -403,13 +413,13 @@
       <!-- Modal Tabs -->
       <div class="flex border-b border-slate-200 bg-slate-100 px-4 pt-2 gap-2">
         <button type="button" data-modal-tab="tabInstructions" class="modal-tab-btn px-3.5 py-2 rounded-t-xl text-xs font-bold bg-white text-emerald-800 border-b-2 border-emerald-600">
-          📋 1. Roteiro da Apresentação
+          📋 1. Instruções do Trabalho
         </button>
         <button type="button" data-modal-tab="tabBook" class="modal-tab-btn px-3.5 py-2 rounded-t-xl text-xs font-bold text-slate-600 hover:text-slate-900">
           📖 2. O Livro (Maria José Dupré)
         </button>
         <button type="button" data-modal-tab="tabControls" class="modal-tab-btn px-3.5 py-2 rounded-t-xl text-xs font-bold text-slate-600 hover:text-slate-900">
-          🎮 3. Como Usar os Controles
+          🎮 3. Como Interagir no Mapa
         </button>
       </div>
 
@@ -419,13 +429,13 @@
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
             <div class="md:col-span-2 space-y-2.5">
               <div class="p-3 rounded-2xl bg-emerald-50 border border-emerald-200">
-                <h3 class="font-bold text-emerald-900 text-sm mb-1.5">✅ Como apresentar o trabalho em 5 passos simples:</h3>
+                <h3 class="font-bold text-emerald-900 text-sm mb-1.5">✅ Roteiro Fácil para Apresentar (5 Passos):</h3>
                 <ol class="list-decimal list-inside space-y-1.5 text-xs text-slate-700">
-                  <li><strong>Passo 1 (O Rio e a Ilha Fluvial):</strong> Mostre que a Ilha Perdida fica no meio do leito do <strong>Rio Paraíba do Sul</strong>, entre a margem da Fazenda dos Padrinhos e a Serra. Aponte a Rosa dos Ventos, Escala (0–100m), Coordenadas (A–H / 1–8) e Legenda.</li>
-                  <li><strong>Passo 2 (Lugares do Livro):</strong> Clique nos pinos para mostrar o <strong>Desembarque da Canoa (D5)</strong>, a <strong>Mata Fechada (D4)</strong>, as <strong>Áreas de Risco (E5)</strong> e o <strong>Abrigo de Simão (E3)</strong> no alto da montanha com cachoeira.</li>
-                  <li><strong>Passo 3 (Evento Climático Extremo 24h):</strong> Clique em <strong>"▶ Simular"</strong> para mostrar o que acontece quando chove o volume de 1 mês inteiro (250 mm) em 24h: o rio sobe +4,8m, fica barrento e leva a canoa!</li>
-                  <li><strong>Passo 4 (Cortina Swipe):</strong> Arraste a linha divisória no meio da tela para comparar na mesma planta o cenário de 1944 (direita) e a inundação atual (esquerda).</li>
-                  <li><strong>Passo 5 (Conclusão Geográfica):</strong> Explique que as várzeas baixas alagam, mas o <strong>Abrigo de Simão (26m de altitude)</strong> fica protegido pelo relevo alto e pela Mata Fechada.</li>
+                  <li><strong>Relevo Fluvial e Marítimo (Matriz 20×15):</strong> Na montante (noroeste) ficam as <strong>colinas verdes arredondadas</strong>; o <strong>Rio Paraíba do Sul</strong> desce pelas <strong>várzeas</strong>, contorna a <strong>Ilha Perdida</strong> e deságua no <strong>mar na jusante</strong>.</li>
+                  <li><strong>Lugares do Livro:</strong> Mostre a <strong>Fazenda dos Padrinhos (D6)</strong>, o <strong>Ponto de Desembarque da Canoa (G12)</strong>, a <strong>Mata Fechada (K8)</strong>, as <strong>Áreas de Risco de Inundação (N11)</strong> e o <strong>Abrigo de Simão (H4)</strong> na colina alta com gruta.</li>
+                  <li><strong>Evento Climático Extremo (24h):</strong> Simule 1 mês de chuva em 24h (250 mm). A cheia em <strong>azul-cobalto vibrante (+4,5m)</strong> encobre as praias e várzeas e leva a canoa!</li>
+                  <li><strong>Cortina Swipe (2 Cenários na Mesma Planta):</strong> Arraste a barra central para comparar o Cenário Normal de 1944 (direita) e a Inundação de 24h (esquerda).</li>
+                  <li><strong>O que Muda no Mapa:</strong> As várzeas baixas alagam, mas o Abrigo de Simão (22 m de altitude na colina arredondada) permanece seguro.</li>
                 </ol>
               </div>
             </div>
@@ -444,9 +454,9 @@
               <span class="text-[11px] text-emerald-700 font-bold mt-2">Maria José Dupré (1944)</span>
             </div>
             <div class="md:col-span-2 space-y-2 text-xs sm:text-sm text-slate-700 leading-relaxed">
-              <h3 class="font-display text-base font-bold text-slate-900">A Aventura no Vale do Paraíba do Sul</h3>
-              <p>Os irmãos <strong>Henrique e Eduardo</strong> passam as férias na fazenda dos padrinhos, em Taubaté (SP), às margens do caudaloso <strong>Rio Paraíba do Sul</strong>.</p>
-              <p>Eles atravessam o braço do rio escondidos de canoa até a <strong>Ilha Perdida</strong>. Durante a noite, as águas sobem e arrastam a canoa. Explorando o relevo da ilha, eles descobrem a importância de buscar abrigo nas partes altas — onde vive o eremita <strong>Simão</strong>.</p>
+              <h3 class="font-display text-base font-bold text-slate-900">A Aventura de Henrique e Eduardo</h3>
+              <p>Durante as férias na fazenda dos padrinhos, os irmãos <strong>Henrique e Eduardo</strong> pegam a canoa escondidos para explorar a misteriosa <strong>Ilha Perdida</strong>.</p>
+              <p>A subida das águas leva a canoa embora, e os meninos precisam atravessar as várzeas e a <strong>Mata Fechada</strong> até encontrar abrigo seguro na gruta da colina alta onde vive o eremita <strong>Simão</strong>.</p>
             </div>
           </div>
         </div>
@@ -456,32 +466,24 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-700">
             <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
               <strong class="text-sky-800 block mb-1">🌓 Cortina Comparativa (Swipe)</strong>
-              Arraste o círculo azul central para comparar na mesma planta o cenário de 1944 (direita) com a enchente de 24h (esquerda).
+              Arraste o círculo azul central para comparar na mesma planta o cenário de 1944 (direita) com a enchente azul-cobalto de 24h (esquerda).
             </div>
             <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
-              <strong class="text-amber-800 block mb-1">⛰️ Exagero Vertical (Relevo 3D)</strong>
-              Use o controle <em>Exagero Vertical</em> no painel esquerdo para aumentar a altura das serras, do Morro de Simão e do vale do rio.
-            </div>
-            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
-              <strong class="text-emerald-800 block mb-1">🖱️ Girar 3D e Zoom</strong>
-              Arraste o mapa para girar a câmera em 3D livremente, use a roda do mouse para dar Zoom e clique nos pinos coloridos.
-            </div>
-            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
-              <strong class="text-rose-800 block mb-1">✥ Arrastar Pontos e Medir</strong>
-              Ative <em>Arrastar Elementos</em> para mudar qualquer ponto de lugar e ver se a nova altitude alaga ou é segura!
+              <strong class="text-emerald-800 block mb-1">⚡ Navegação Leve e Fluida (60 FPS)</strong>
+              Arraste para girar o mapa em 3D sem travamentos, use a roda do mouse para dar Zoom e clique nos rótulos sem sobreposição.
             </div>
           </div>
         </div>
       </div>
 
       <div class="p-3.5 bg-slate-100 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
-        <span class="text-xs text-slate-600">💡 Dica: Use a barra numerada <strong>1 a 5</strong> na parte inferior para guiar sua apresentação!</span>
+        <span class="text-xs text-slate-600">💡 Clique nos botões <strong>1 a 5</strong> na barra inferior durante a apresentação!</span>
         <div class="flex items-center gap-2">
           <button id="btnStartPresentationFromModal" type="button" class="px-4 py-2 rounded-xl text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-sm">
-            🎤 Começar pelo Passo 1
+            🎤 Iniciar Modo Apresentação
           </button>
           <button id="btnStartExploring" type="button" class="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md">
-            🚀 Ver o Mapa 3D
+            🚀 Explorar o Mapa Agora
           </button>
         </div>
       </div>
@@ -491,7 +493,7 @@
 
   <script>
     // =========================================================================
-    // 1. WEB AUDIO SYNTHESIZER (River, Birds, Rain & Thunder)
+    // 1. WEB AUDIO SYNTHESIZER
     // =========================================================================
     const SoundEngine = {
       ctx: null,
@@ -523,7 +525,7 @@
           riverFilter.type = 'lowpass';
           riverFilter.frequency.value = 320;
           this.riverGain = this.ctx.createGain();
-          this.riverGain.gain.value = 0.02;
+          this.riverGain.gain.value = 0.018;
           riverSrc.connect(riverFilter);
           riverFilter.connect(this.riverGain);
           this.riverGain.connect(this.ctx.destination);
@@ -556,11 +558,11 @@
           return;
         }
         const rainRatio = state.viewMode === 'normal' ? 0 : (state.rainHours / 24);
-        this.riverGain.gain.setTargetAtTime(0.018 + rainRatio * 0.025, now, 0.2);
-        this.rainGain.gain.setTargetAtTime(rainRatio * 0.05, now, 0.2);
+        this.riverGain.gain.setTargetAtTime(0.015 + rainRatio * 0.025, now, 0.2);
+        this.rainGain.gain.setTargetAtTime(rainRatio * 0.045, now, 0.2);
       },
 
-      playTone(freq = 540, dur = 0.08, type = 'sine', vol = 0.06) {
+      playTone(freq = 540, dur = 0.07, type = 'sine', vol = 0.05) {
         if (!this.enabled) return;
         this.init();
         if (!this.ctx) return;
@@ -588,14 +590,14 @@
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(88, now);
-        osc.frequency.exponentialRampToValueAtTime(30, now + 0.85);
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+        osc.frequency.setValueAtTime(85, now);
+        osc.frequency.exponentialRampToValueAtTime(32, now + 0.75);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         osc.start(now);
-        osc.stop(now + 0.9);
+        osc.stop(now + 0.8);
       },
 
       playBirdChirp() {
@@ -608,38 +610,42 @@
         const gain = this.ctx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(1650, now);
-        osc.frequency.exponentialRampToValueAtTime(2350, now + 0.07);
-        osc.frequency.exponentialRampToValueAtTime(1900, now + 0.14);
-        gain.gain.setValueAtTime(0.035, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        osc.frequency.exponentialRampToValueAtTime(2350, now + 0.06);
+        osc.frequency.exponentialRampToValueAtTime(1900, now + 0.12);
+        gain.gain.setValueAtTime(0.03, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         osc.start(now);
-        osc.stop(now + 0.16);
+        osc.stop(now + 0.14);
       }
     };
 
     // =========================================================================
-    // 2. APPLICATION STATE & EXPANDED 8x8 RIVER VALLEY COORDINATE SYSTEM
+    // 2. EXPANDED 20x15 PANORAMIC MATRIX (Columns A..T x Rows 1..15)
     // =========================================================================
-    // World coordinates: x in [-100, +100], z in [-100, +100] (200x200 units = 8x8 quadrants A-H, 1-8)
-    const WORLD_SIZE = 200;
-    const HALF_WORLD = 100;
+    const COLS_COUNT = 20; // A to T
+    const ROWS_COUNT = 15; // 1 to 15
+    const WORLD_W = 320;   // X in [-160, +160]
+    const WORLD_D = 240;   // Z in [-120, +120]
+    const HALF_W = WORLD_W / 2;
+    const HALF_D = WORLD_D / 2;
+    const COL_LETTERS = 'ABCDEFGHIJKLMNOPQRST'.split('');
 
     const state = {
-      viewMode: 'swipe', // 'swipe' | 'normal' | 'extreme'
+      viewMode: 'swipe',
       swipePercent: 50,
-      rainHours: 24, // 0..24h
-      verticalExag: 2.2, // 1.0..3.5x vertical exaggeration!
+      rainHours: 24,
+      verticalExag: 1.8,
       simPlaying: false,
       activeTool: 'pan',
-      cameraAngle: Math.PI * 0.25, // 45 deg true isometric azimuth
-      cameraPitch: 0.62,
-      cameraZoom: 1.0,
-      cameraTarget: { x: 0, z: 0 },
-      targetCameraAngle: Math.PI * 0.25,
-      targetCameraZoom: 1.0,
-      targetCameraCenter: { x: 0, z: 0 },
+      cameraAngle: Math.PI * 0.42, // Panoramic front-angle view like reference image_442059.jpg
+      cameraPitch: 0.64,
+      cameraZoom: 0.80,            // Zoomed slightly out so the entire 20x15 island & estuary breathes nicely!
+      cameraTarget: { x: 0, z: 4 },
+      targetCameraAngle: Math.PI * 0.42,
+      targetCameraZoom: 0.80,
+      targetCameraCenter: { x: 0, z: 4 },
       layers: {
         forest: true,
         markers: true,
@@ -656,190 +662,181 @@
       rulerPoints: [],
       presentationStep: 0,
 
+      // Well-spaced landmarks across the 20x15 panoramic map so they never bunch up
       pois: [
         {
           id: 'canoe',
           icon: '🛶',
           name: 'Ponto de Desembarque da Canoa',
-          shortLabel: 'Desembarque',
-          wx: -6,
-          wz: 34,
-          color: '#f59e0b',
-          desc: 'Praia baixa e arenosa na ponta sul da Ilha Perdida (no meio do Rio Paraíba do Sul), onde Henrique e Eduardo desembarcam escondidos. Por ficar na cota de apenas 1,6 m, qualquer cheia encobre a praia.',
-          climateEffect: 'Com 250 mm de chuva em 24h (volume de 1 mês inteiro), o rio sobe +4,8m, submerge toda a praia de desembarque e arrasta a canoa rio abaixo!'
+          shortLabel: 'Desembarque da Canoa',
+          wx: -42,
+          wz: 58,
+          color: '#d97706',
+          desc: 'Praia baixa arenosa e trapiche de madeira (Cota 1,5 m) onde Henrique e Eduardo desembarcam na Ilha Perdida. Quando o rio sobe, a correnteza leva a canoa embora.',
+          climateEffect: 'Com 250 mm de chuva em 24h, a cheia azul (+4,5 m) cobre toda a praia e o trapiche, arrastando a canoa para a foz do rio!'
         },
         {
           id: 'simao',
           icon: '⛺',
-          name: 'Abrigo e Gruta de Simão (Topo Rochoso)',
+          name: 'Abrigo / Gruta de Simão (Colina Alta)',
           shortLabel: 'Abrigo de Simão',
-          wx: 26,
-          wz: -4,
+          wx: -36,
+          wz: -46,
           color: '#0284c7',
-          desc: 'Gruta de pedra e cabana rústica no pico mais alto da Ilha Perdida (~26 m de altitude), com nascente e árvores frutíferas, onde o eremita Simão acolhe os meninos.',
-          climateEffect: 'Pela sua elevada altitude (26 m), o Abrigo de Simão fica totalmente fora do alcance da enchente extrema (+4,8 m), demonstrando como o relevo alto serve de refúgio natural.'
+          desc: 'Gruta escavada na colina verde arredondada na parte alta (montante, Cota 22 m), com nascente e árvores frutíferas, onde Simão vive protegido das enchentes.',
+          climateEffect: 'Por estar a 22 m de altitude nas colinas arredondadas da montante, o Abrigo de Simão permanece 100% seguro acima da inundação de +4,5 m.'
         },
         {
           id: 'forest',
-          icon: '🌲',
-          name: 'Mata Fechada (Floresta Atlântica)',
+          icon: '🌳',
+          name: 'Mata Fechada (Interior da Ilha)',
           shortLabel: 'Mata Fechada',
-          wx: 8,
-          wz: 14,
-          color: '#16a34a',
-          desc: 'Densa cobertura florestal no coração da ilha fluvial, cortada por trilhas estreitas onde os meninos caminham. As copas e raízes protegem o solo contra a erosão das chuvas.',
-          climateEffect: 'A Mata Fechada retém parte da água da chuva extrema e evita deslizamentos nas encostas do morro central, embora a vegetação de várzea fique submersa.'
+          wx: 12,
+          wz: -8,
+          color: '#15803d',
+          desc: 'Densa cobertura de floresta tropical no centro da ilha, cortada pelos braços do rio e trilhas. Suas árvores e raízes protegem o solo contra a erosão fluvial.',
+          climateEffect: 'A Mata Fechada age como esponja natural, absorvendo parte da chuva extrema e segurando a terra das colinas arredondadas.'
         },
         {
           id: 'flood',
           icon: '⚠️',
-          name: 'Áreas de Risco de Inundação (Várzea)',
+          name: 'Várzea e Áreas de Risco de Inundação',
           shortLabel: 'Risco de Inundação',
-          wx: 28,
-          wz: 38,
+          wx: 52,
+          wz: 36,
           color: '#e11d48',
-          desc: 'Planícies aluviais baixas (várzeas entre 1 m e 4,5 m) nas margens da Ilha Perdida e na beira continental do Rio Paraíba do Sul, sujeitas ao transbordamento periódico.',
-          climateEffect: 'No cenário de mudanças climáticas (24h de chuva extrema), o leito do rio transborda e inunda 48% da ilha e as várzeas marginais, com forte correnteza barrenta.'
+          desc: 'Planície aluvial baixa (várzea do rio, entre 1 m e 4,2 m de altitude) que margeia os canais fluviais e a parte baixa próxima à jusante (mar).',
+          climateEffect: 'Na simulação de chuva de 1 mês em 24h, toda a várzea do rio fica submersa sob uma lâmina de água azul-cobalto de +4,5 m.'
         },
         {
           id: 'farm',
           icon: '🏡',
-          name: 'Fazenda dos Padrinhos (Margem de Taubaté)',
-          shortLabel: 'Fazenda (Margem)',
-          wx: -68,
-          wz: 22,
-          color: '#9333ea',
-          desc: 'Situada na margem continental esquerda do Rio Paraíba do Sul, em Taubaté (SP). É do píer desta fazenda que Henrique e Eduardo saem de canoa rumo à ilha no meio do rio.',
-          climateEffect: 'Na cheia extrema de 24h, a água avança sobre a várzea da fazenda e encobre o píer de madeira, isolando a comunicação entre o continente e a ilha.'
+          name: 'Fazenda dos Padrinhos (Margem Continental)',
+          shortLabel: 'Fazenda dos Padrinhos',
+          wx: -112,
+          wz: -18,
+          color: '#7c3aed',
+          desc: 'Localizada na margem continental a oeste do braço principal do Rio Paraíba do Sul. É do trapiche desta fazenda que os meninos saem escondidos de canoa.',
+          climateEffect: 'Na cheia extrema de 24h, a várzea marginal da fazenda também alaga, cobrindo o trapiche de madeira e dificultando a travessia.'
         }
-      ],
-      customStamps: []
+      ]
     };
 
     // =========================================================================
-    // 3. CONTINUOUS RIVER VALLEY + RIVER ISLAND HEIGHTFIELD FUNCTION
+    // 3. GEOGRAPHY HEIGHTFIELD: ROUNDED HILLS UPSTREAM, RIVER FLOODPLAIN, ISLAND & SEA DOWNSTREAM
     // =========================================================================
-    // Wait: why did the previous version look like an ocean island?
-    // Because the edges were water! Now:
-    // - A wide river channel flows diagonally from North-West (-85, -100) to South-East (+85, +100).
-    // - Inside the center of the river channel sits the elongated RIVER ISLAND ("A Ilha Perdida").
-    // - Outside the river channel on the LEFT/SW is the CONTINENTAL FARM BANK (Margem de Taubaté).
-    // - Outside the river channel on the RIGHT/NE is the TALL MOUNTAIN RANGE (Serra da Mantiqueira / Vale).
-    function getValleyGeography(wx, wz) {
-      // 1. A ILHA PERDIDA (Large sculpted Island sitting in the estuary / sea bay at the river mouth: wx ~ 16, wz ~ 18)
-      const islandAngle = -0.28;
-      const cosA = Math.cos(islandAngle), sinA = Math.sin(islandAngle);
-      const ix = (wx - 16) * cosA - (wz - 18) * sinA;
-      const iz = (wx - 16) * sinA + (wz - 18) * cosA;
-      const wobble = 0.09 * Math.sin(wx * 0.14) * Math.cos(wz * 0.14);
-      const islandNormDist = Math.hypot(ix / 36, iz / 46) + wobble;
+    // NO jagged grey mountains! Only smooth green rounded hills (colinas arredondadas) upstream,
+    // wide river floodplain (várzea do rio), winding river channels splitting around the Island,
+    // and the open Sea downstream (mar na jusante) — inspired directly by image_442059.jpg!
+    function getTerrainGeography(wx, wz) {
+      // Normalized elliptical coordinate for the Panoramic Island + Upstream Margin
+      // Let's shape a grand panoramic island/estuary complex like image_442059.jpg:
+      // - Upstream (Montante: NW / Top-Left, wz < -20, wx < 40): Lush green rounded hills (Colinas Arredondadas, up to 23m)
+      // - Left Continental Bank (wx < -88, wz < 45): Fazenda dos Padrinhos bank separated by the Left River Channel
+      // - Main Island ("A Ilha Perdida"): spans wx in [-78..+95], wz in [-78..+78] with winding river branches cutting through it!
+      // - Downstream (Jusante: SE / Bottom-Right & Outer Ring): Open Sea (Mar na Jusante) with sandy beaches & jetties!
 
-      if (islandNormDist < 1.0) {
-        // Sculpted 3D Island Relief with strong vertical volume
-        let h = (1.0 - islandNormDist) * 15.5;
+      const wobble = 0.06 * Math.sin(wx * 0.08) * Math.cos(wz * 0.08) + 0.04 * Math.cos(wx * 0.13 - wz * 0.11);
 
-        // Tall Rocky Peak at Simão's Shelter (NE part of the island: wx ~ 26, wz ~ -4)
-        const distSimao = Math.hypot(wx - 26, wz + 4);
-        if (distSimao < 26) {
-          h += Math.pow((26 - distSimao) / 26, 1.4) * 22.0;
-        }
+      // 1. Left Continental Bank (Fazenda dos Padrinhos at wx ~ -112, wz ~ -18)
+      const distLeftContinent = Math.hypot((wx + 122) / 36, (wz + 22) / 68) + wobble * 0.5;
 
-        // Secondary central forest hill (Mata Fechada: wx ~ 8, wz ~ 14)
-        const distRidge = Math.hypot(wx - 8, wz - 14);
-        if (distRidge < 24) {
-          h += Math.pow((24 - distRidge) / 24, 1.35) * 9.5;
-        }
+      // 2. Main Panoramic Island oval (like image_442059.jpg)
+      const distMainIsland = Math.hypot((wx - 4) / 102, (wz + 2) / 82) + wobble;
 
-        // Low sandy landing beach (Desembarque: wx ~ -6, wz ~ 34) & Floodplain (Várzea: wx ~ 28, wz ~ 38)
-        const distBeach = Math.hypot((wx + 6) / 22, (wz - 34) / 18);
-        if (distBeach < 1.0) {
-          h *= (0.20 + 0.55 * distBeach);
-        }
-        const distVarzea = Math.hypot((wx - 28) / 22, (wz - 38) / 18);
-        if (distVarzea < 1.0) {
-          h *= (0.22 + 0.52 * distVarzea);
-        }
+      // Winding River Channels (Rio Principal + Braço da Várzea) flowing from Upstream NW (-60, -85) to Downstream Sea (+30, +85)
+      // Channel 1: Left River Arm separating Fazenda dos Padrinhos from the Island
+      const river1X = -82 + (wz + 20) * 0.18 + Math.sin(wz * 0.06) * 10;
+      const dRiver1 = Math.abs(wx - river1X);
+      const river1HalfW = 10 + Math.max(0, (wz + 60) * 0.06);
 
-        return {
-          elev: Math.max(0.5, h),
-          zone: 'island',
-          islandNormDist
-        };
+      // Channel 2: Central Meandering River cutting across the island from the Upstream Hills (-15, -75) to the Sea (-5, +75)
+      const river2X = -10 + Math.sin(wz * 0.055) * 18 + (wz * 0.08);
+      const dRiver2 = Math.abs(wx - river2X);
+      const river2HalfW = 7.5 + Math.max(0, (wz + 50) * 0.055);
+
+      // Channel 3: Right Tributary / Várzea Channel on the East side (+55, -35 to +75, +45)
+      const river3X = 58 + Math.cos(wz * 0.06) * 12 + (wz * 0.15);
+      const dRiver3 = Math.abs(wx - river3X);
+      const river3HalfW = (wz > -45 && wz < 65) ? (6.5 + (wz + 45) * 0.05) : 0;
+
+      // If in open sea around the outer perimeter (Mar na Jusante)
+      const onLeftBank = distLeftContinent < 1.0 && dRiver1 > river1HalfW;
+      const onIsland = distMainIsland < 1.0 && dRiver1 > river1HalfW && dRiver2 > river2HalfW && (river3HalfW === 0 || dRiver3 > river3HalfW);
+
+      if (!onLeftBank && !onIsland) {
+        return { elev: -2.0, zone: 'water' };
       }
 
-      // 2. RIVER CHANNEL WINDING FROM NW SERRA AND OPENING INTO THE SEA / ESTUARY BAY (SE / FRONT-RIGHT)
-      // River starts in the NW (-65, -100), winds past the Farm (-58, -10), and flares wide into the Sea for wz > -10 and wx > -35!
-      const riverCurveX = -42 + (wz + 100) * 0.42 + Math.sin(wz * 0.045) * 14;
-      const dxRiver = wx - riverCurveX;
+      // Base coastal beach & low floodplain (Várzea) elevation (0.6m to 3.8m)
+      const edgeFactor = onLeftBank ? (1.0 - distLeftContinent) : (1.0 - distMainIsland);
+      // Taper down gently near the river channels too (creating wide Várzeas do Rio!)
+      const minRiverClearance = onLeftBank
+        ? (dRiver1 - river1HalfW)
+        : Math.min(dRiver1 - river1HalfW, dRiver2 - river2HalfW, river3HalfW > 0 ? (dRiver3 - river3HalfW) : 999);
+      const riverBankTaper = Math.min(1.0, Math.max(0.08, minRiverClearance / 16));
 
-      // As wz goes from -100 (upstream) to +100 (sea coast), the water width expands from 18m (river) to 160m (open sea/bay!)
-      const seaExpansion = wz > -18 ? Math.pow((wz + 18) / 118, 1.45) * 135 : 0;
-      const riverHalfWidth = 17 + seaExpansion;
+      let h = 0.7 + Math.min(1.0, edgeFactor * 2.8) * riverBankTaper * 4.2;
 
-      // Also open sea in the entire SE / E quadrant (wx > -22 && wz > 5)
-      const coastlineCurve = -28 + Math.sin(wx * 0.04) * 12 - (wx + 20) * 0.38;
-      const isOpenSea = (wz > coastlineCurve && wx > -38);
-
-      if (Math.abs(dxRiver) < riverHalfWidth || isOpenSea) {
-        return {
-          elev: -2.4,
-          zone: (wz > 15 || isOpenSea) ? 'sea' : 'river',
-          islandNormDist
-        };
-      }
-
-      // 3. CONTINENTAL LANDMASS (Upstream Serra Mountains in NW/N + Farmhouse Mainland Coast in W/SW)
-      const distToWater = Math.min(Math.abs(dxRiver) - riverHalfWidth, Math.max(0, coastlineCurve - wz));
-      if (wx < riverCurveX && !isOpenSea) {
-        // Left/West Continental Margin: Fazenda dos Padrinhos & Coastal Plain
-        let h = 1.3 + Math.min(18, distToWater * 0.32);
-        h += (Math.sin(wx * 0.05) * Math.cos(wz * 0.05) + 1) * 2.8;
-        // Flat terrace for Fazenda dos Padrinhos (-68, 22)
-        const distFarm = Math.hypot(wx + 68, wz - 22);
-        if (distFarm < 24) {
-          h = 7.2 + (distFarm / 24) * 1.5;
+      if (onLeftBank) {
+        // Gentle rounded hill on the continental farm bank (montante oeste)
+        const hillFarm = Math.hypot((wx + 125) / 28, (wz + 45) / 32);
+        if (hillFarm < 1.0) {
+          h += Math.pow(Math.cos(hillFarm * Math.PI * 0.5), 1.6) * 11.0;
         }
-        return { elev: h, zone: 'left_bank', islandNormDist };
-      } else {
-        // North / NW Towering Serra Mountain Range (where the river originates, like image_5c9184.jpg!)
-        let h = 1.6 + Math.pow(Math.max(1, distToWater), 1.18) * 0.58;
-        const peak1 = Math.hypot(wx + 15, wz + 75);
-        if (peak1 < 52) h += Math.pow((52 - peak1) / 52, 1.35) * 38;
-        const peak2 = Math.hypot(wx - 45, wz + 72);
-        if (peak2 < 46) h += Math.pow((46 - peak2) / 46, 1.4) * 31;
-        const peak3 = Math.hypot(wx + 75, wz + 78);
-        if (peak3 < 42) h += Math.pow((42 - peak3) / 42, 1.4) * 28;
-        h += Math.sin(wx * 0.16) * Math.cos(wz * 0.16) * 1.5;
-        return { elev: h, zone: 'right_mountain', islandNormDist };
+        return { elev: h, zone: 'continent' };
       }
+
+      // ON THE MAIN ISLAND:
+      // Add smooth, lush green ROUNDED HILLS upstream (Colinas Arredondadas na Montante: NW & N sectors, like left side of image_442059.jpg!)
+      const roundedHills = [
+        { cx: -38, cz: -46, rx: 28, rz: 24, peak: 18.5 }, // Main Colina de Simão (Abrigo de Simão at ~22.5m)
+        { cx: -8,  cz: -52, rx: 24, rz: 20, peak: 15.0 }, // Second Upstream Rounded Hill
+        { cx: -48, cz: -14, rx: 22, rz: 20, peak: 12.0 }, // Mid-West Rounded Hill
+        { cx: 34,  cz: -36, rx: 26, rz: 22, peak: 13.5 }, // North-East Soft Green Hill (replaces the crossed-out grey mountains!)
+        { cx: 14,  cz: -8,  rx: 25, rz: 22, peak: 8.5  }  // Central Forest gentle mound
+      ];
+
+      for (const hill of roundedHills) {
+        const d = Math.hypot((wx - hill.cx) / hill.rx, (wz - hill.cz) / hill.rz);
+        if (d < 1.0) {
+          // Smooth cosine bell curve -> true rounded hill (colina arredondada) with zero jagged spikes!
+          h += Math.pow(Math.cos(d * Math.PI * 0.5), 1.7) * hill.peak * riverBankTaper;
+        }
+      }
+
+      // Keep the Downstream SE & SW sectors low as wide Floodplains (Várzea do Rio, 1.2m to 3.6m) & Sandy Beaches
+      if (wz > 22) {
+        const downstreamLowFactor = Math.max(0.38, 1.0 - (wz - 22) / 75);
+        h *= downstreamLowFactor;
+      }
+
+      return { elev: Math.max(0.55, h), zone: 'island' };
     }
 
     function worldToCoordLabel(wx, wz) {
-      const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-      const ci = Math.max(0, Math.min(7, Math.floor(((wx + HALF_WORLD) / WORLD_SIZE) * 8)));
-      const ri = Math.max(1, Math.min(8, Math.floor(((wz + HALF_WORLD) / WORLD_SIZE) * 8) + 1));
-      return `${cols[ci]}${ri}`;
+      const ci = Math.max(0, Math.min(COLS_COUNT - 1, Math.floor(((wx + HALF_W) / WORLD_W) * COLS_COUNT)));
+      const ri = Math.max(1, Math.min(ROWS_COUNT, Math.floor(((wz + HALF_D) / WORLD_D) * ROWS_COUNT) + 1));
+      return `${COL_LETTERS[ci]}${ri}`;
     }
 
     // =========================================================================
-    // 4. THREE.JS 3D DIORAMA ENGINE (Dual-Scenario Scissor Rendering!)
+    // 4. ULTRA-FAST THREE.JS 3D ENGINE (Instanced Trees + Zero Per-Frame Buffer Uploads)
     // =========================================================================
     const container = document.getElementById('webglContainer');
     const hudCanvas = document.getElementById('isoMapCanvas');
     const hudCtx = hudCanvas.getContext('2d');
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.4)); // Capped at 1.4x for silky 60fps
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.enabled = false; // Huge performance boost!
     container.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
 
-    // Orthographic Isometric Camera for authentic SimCity / Architectural Diorama look
     const aspect = window.innerWidth / window.innerHeight;
-    const frustumSize = 230;
+    const frustumSize = 275;
     const camera = new THREE.OrthographicCamera(
       (-frustumSize * aspect) / 2,
       (frustumSize * aspect) / 2,
@@ -849,440 +846,286 @@
       2000
     );
 
-    // Lighting
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x475569, 0.78);
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x334155, 0.85);
     hemiLight.position.set(0, 200, 0);
     scene.add(hemiLight);
 
-    const dirLight = new THREE.DirectionalLight(0xfffbeb, 0.92);
-    dirLight.position.set(-140, 220, 110);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
-    dirLight.shadow.camera.left = -160;
-    dirLight.shadow.camera.right = 160;
-    dirLight.shadow.camera.top = 160;
-    dirLight.shadow.camera.bottom = -160;
+    const dirLight = new THREE.DirectionalLight(0xfffbeb, 0.88);
+    dirLight.position.set(-120, 220, 140);
     scene.add(dirLight);
 
-    // Root Diorama Group (scales Y with state.verticalExag!)
     const dioramaGroup = new THREE.Group();
     scene.add(dioramaGroup);
 
     const reliefGroup = new THREE.Group();
     dioramaGroup.add(reliefGroup);
 
-    // 4A. BUILD 140x140 HIGH-RESOLUTION VERTEX-COLORED TERRAIN MESH
-    const MESH_SEGMENTS = 140;
-    const terrainGeo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, MESH_SEGMENTS, MESH_SEGMENTS);
-    terrainGeo.rotateX(-Math.PI / 2);
+    // 4A. TWO PRE-BUILT TERRAIN MESHES (Normal vs Extreme Flood Highlight -> Zero CPU-GPU upload lag!)
+    const SEG_X = 96;
+    const SEG_Z = 72;
+    const baseGeo = new THREE.PlaneGeometry(WORLD_W, WORLD_D, SEG_X, SEG_Z);
+    baseGeo.rotateX(-Math.PI / 2);
 
-    const posAttr = terrainGeo.attributes.position;
-    const vertexCount = posAttr.count;
-    const normalColors = new Float32Array(vertexCount * 3);
-    const extremeColors = new Float32Array(vertexCount * 3);
-    const baseElevations = new Float32Array(vertexCount);
+    const posAttr = baseGeo.attributes.position;
+    const vCount = posAttr.count;
+    const normalCols = new Float32Array(vCount * 3);
+    const extremeCols = new Float32Array(vCount * 3);
+    const cTmp = new THREE.Color();
 
-    const cHelper = new THREE.Color();
-
-    for (let i = 0; i < vertexCount; i++) {
+    for (let i = 0; i < vCount; i++) {
       const vx = posAttr.getX(i);
       const vz = posAttr.getZ(i);
-      const geo = getValleyGeography(vx, vz);
-      const h = geo.elev;
-      baseElevations[i] = h;
-      posAttr.setY(i, h);
+      const { elev } = getTerrainGeography(vx, vz);
+      posAttr.setY(i, elev);
 
-      // Determine Normal Scenario (1944) Vertex Color
-      if (h < 0.2) {
-        cHelper.setHex(0x0b4f6c); // Riverbed
-      } else if (h < 2.2) {
-        cHelper.setHex(0xf4d58d); // Golden sandy beach / river margin
-      } else if (h < 4.8) {
-        // Low floodplain (várzea)
-        cHelper.setHex(geo.zone === 'island' ? 0x74c69d : 0x95d5b2);
-      } else if (h < 14.5) {
-        // Lush emerald hillside / pasture
-        cHelper.setHex(geo.zone === 'left_bank' ? 0x65a30d : 0x2d6a4f);
-      } else if (h < 25.0) {
-        // Steep rocky mountain / Simão's cliff (warm terracotta/brown rock like image_5c9184.jpg!)
-        cHelper.setHex(0x8d6e63);
-      } else if (h < 33.0) {
-        cHelper.setHex(0x6d4c41);
+      // Normal 1944 Color Palette (like reference image_442059.jpg: golden beaches, light-green várzea, lush green rounded hills)
+      if (elev < 0.2) {
+        cTmp.setHex(0x0c4a6e); // Sea/River bed
+      } else if (elev < 1.9) {
+        cTmp.setHex(0xfde68a); // Golden sandy beach (Praia)
+      } else if (elev < 4.5) {
+        cTmp.setHex(0x86efac); // Low flat River Floodplain (Várzea do Rio)
+      } else if (elev < 12.0) {
+        cTmp.setHex(0x4ade80); // Mid green island terrain
       } else {
-        // High rocky/misty summit cap (like image_5c9184.jpg!)
-        cHelper.setHex(0xe2e8f0);
+        cTmp.setHex(0x22c55e); // Smooth green Rounded Hills upstream (Colinas Arredondadas)
       }
-      normalColors[i * 3] = cHelper.r;
-      normalColors[i * 3 + 1] = cHelper.g;
-      normalColors[i * 3 + 2] = cHelper.b;
+      normalCols[i * 3] = cTmp.r;
+      normalCols[i * 3 + 1] = cTmp.g;
+      normalCols[i * 3 + 2] = cTmp.b;
 
-      // Determine Extreme Scenario (24h Flood + Flood Risk Highlight) Vertex Color
-      if (h > 0.2 && h < 5.0) {
-        // Flooded / high-risk várzea highlighted in warm coral/amber
-        cHelper.setHex(0xe11d48);
-      } else if (h >= 5.0 && h < 14.5) {
-        cHelper.setHex(0x1b4332); // Rain-soaked dark forest
+      // Extreme 24h Flood Color Palette (High-contrast Cyan-Blue Flood Zone on Várzea!)
+      if (elev >= 0.2 && elev < 4.6) {
+        cTmp.setHex(0x38bdf8); // Flooded Várzea highlighted in bright cyan-blue
+      } else if (elev >= 4.6 && elev < 5.3) {
+        cTmp.setHex(0xf43f5e); // Thin high-water flood risk ring
       }
-      extremeColors[i * 3] = cHelper.r;
-      extremeColors[i * 3 + 1] = cHelper.g;
-      extremeColors[i * 3 + 2] = cHelper.b;
+      extremeCols[i * 3] = cTmp.r;
+      extremeCols[i * 3 + 1] = cTmp.g;
+      extremeCols[i * 3 + 2] = cTmp.b;
     }
 
-    terrainGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(normalColors), 3));
-    terrainGeo.computeVertexNormals();
+    baseGeo.computeVertexNormals();
 
-    const terrainMat = new THREE.MeshStandardMaterial({
-      vertexColors: true,
-      roughness: 0.82,
-      metalness: 0.05,
-      flatShading: true // Crisp low-poly isometric facets like image_5c9184.jpg!
-    });
-    const terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
-    terrainMesh.receiveShadow = true;
-    terrainMesh.castShadow = true;
-    reliefGroup.add(terrainMesh);
+    const geoNormal = baseGeo.clone();
+    geoNormal.setAttribute('color', new THREE.BufferAttribute(normalCols, 3));
+    const terrainMeshNormal = new THREE.Mesh(
+      geoNormal,
+      new THREE.MeshLambertMaterial({ vertexColors: true })
+    );
+    reliefGroup.add(terrainMeshNormal);
 
-    // 4B. THICK 3D DIORAMA CROSS-SECTION PEDESTAL WALLS (Shows solid land on sides + River Channel cut!)
-    const wallGroup = new THREE.Group();
-    const BASE_BOTTOM_Y = -14;
+    const geoExtreme = baseGeo.clone();
+    geoExtreme.setAttribute('color', new THREE.BufferAttribute(extremeCols, 3));
+    const terrainMeshExtreme = new THREE.Mesh(
+      geoExtreme,
+      new THREE.MeshLambertMaterial({ vertexColors: true })
+    );
+    terrainMeshExtreme.visible = false;
+    reliefGroup.add(terrainMeshExtreme);
 
-    function buildCrossSectionWall(isXAxis, fixedCoord, flipNormal) {
-      const wallGeom = new THREE.BufferGeometry();
-      const positions = [];
-      const colors = [];
-      const steps = MESH_SEGMENTS;
-      const soilCol = new THREE.Color(0x9c6644);
-      const rockCol = new THREE.Color(0x5c4033);
-
-      for (let s = 0; s < steps; s++) {
-        const t1 = -HALF_WORLD + (s / steps) * WORLD_SIZE;
-        const t2 = -HALF_WORLD + ((s + 1) / steps) * WORLD_SIZE;
-        const x1 = isXAxis ? t1 : fixedCoord;
-        const z1 = isXAxis ? fixedCoord : t1;
-        const x2 = isXAxis ? t2 : fixedCoord;
-        const z2 = isXAxis ? fixedCoord : t2;
-
-        const y1 = getValleyGeography(x1, z1).elev;
-        const y2 = getValleyGeography(x2, z2).elev;
-
-        const pA = [x1, y1, z1];
-        const pB = [x2, y2, z2];
-        const pC = [x2, BASE_BOTTOM_Y, z2];
-        const pD = [x1, BASE_BOTTOM_Y, z1];
-
-        const tri1 = flipNormal ? [pA, pB, pC] : [pB, pA, pC];
-        const tri2 = flipNormal ? [pA, pC, pD] : [pC, pA, pD];
-
-        for (const pt of [...tri1, ...tri2]) {
-          positions.push(pt[0], pt[1], pt[2]);
-          const col = pt[1] > -4 ? soilCol : rockCol;
-          colors.push(col.r, col.g, col.b);
-        }
-      }
-      wallGeom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-      wallGeom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-      wallGeom.computeVertexNormals();
-      const mesh = new THREE.Mesh(
-        wallGeom,
-        new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, side: THREE.DoubleSide })
-      );
-      wallGroup.add(mesh);
-    }
-
-    buildCrossSectionWall(true, HALF_WORLD, true);
-    buildCrossSectionWall(true, -HALF_WORLD, false);
-    buildCrossSectionWall(false, HALF_WORLD, false);
-    buildCrossSectionWall(false, -HALF_WORLD, true);
-    reliefGroup.add(wallGroup);
-
-    // 4C. TRANSLUCENT 3D RIVER WATER VOLUME (Rises in Extreme 24h Scenario!)
-    const waterGeo = new THREE.BoxGeometry(WORLD_SIZE - 0.8, 12, WORLD_SIZE - 0.8, 48, 1, 48);
-    const waterMat = new THREE.MeshStandardMaterial({
+    // 4B. OCEAN / RIVER WATER PLANE (Clear Turquoise in 1944 vs High-Contrast Cobalt Blue in 24h Flood!)
+    const waterGeo = new THREE.PlaneGeometry(WORLD_W * 1.45, WORLD_D * 1.45);
+    waterGeo.rotateX(-Math.PI / 2);
+    const waterMat = new THREE.MeshLambertMaterial({
       color: 0x0ea5e9,
       transparent: true,
-      opacity: 0.84,
-      roughness: 0.18,
-      metalness: 0.15
+      opacity: 0.82
     });
     const waterMesh = new THREE.Mesh(waterGeo, waterMat);
-    waterMesh.position.y = -6.0; // Top face sits at Y = 0.0 in normal scenario
-    waterMesh.receiveShadow = true;
+    waterMesh.position.y = 0.0;
     reliefGroup.add(waterMesh);
 
-    // 4D. ELEVATION CONTOUR LINES, TRAILS & WATERFALL (Like image_5c91df.jpg!)
-    const trailsAndContoursGroup = new THREE.Group();
-    reliefGroup.add(trailsAndContoursGroup);
-
-    (function buildTrailsAndWaterfall() {
-      // Winding Red/Orange Trail on the Island from Desembarque (-14, 26) -> Mata Fechada (-4, -2) -> Abrigo de Simão (14, -22)
-      const trailPts = [
-        [-6, 34], [0, 24], [4, 19], [8, 14], [14, 8], [20, 2], [26, -4]
-      ];
-      const curvePts = trailPts.map(([tx, tz]) => {
-        const ty = getValleyGeography(tx, tz).elev + 0.35;
-        return new THREE.Vector3(tx, ty, tz);
-      });
-      const curve = new THREE.CatmullRomCurve3(curvePts);
-      const tubeGeo = new THREE.TubeGeometry(curve, 48, 0.75, 6, false);
-      const tubeMat = new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.6 });
-      trailsAndContoursGroup.add(new THREE.Mesh(tubeGeo, tubeMat));
-
-      // Secondary yellow trail toward Floodplain (E5: 18, 18)
-      const trail2Pts = [[8, 14], [15, 22], [22, 30], [28, 38]].map(([tx, tz]) =>
-        new THREE.Vector3(tx, getValleyGeography(tx, tz).elev + 0.35, tz)
-      );
-      const curve2 = new THREE.CatmullRomCurve3(trail2Pts);
-      trailsAndContoursGroup.add(new THREE.Mesh(
-        new THREE.TubeGeometry(curve2, 30, 0.6, 6, false),
-        new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.6 })
-      ));
-
-      // Waterfall cascading down from the NE Serra into the Right Arm of the river!
-      const wfGeo = new THREE.PlaneGeometry(5.5, 22, 4, 12);
-      const wfMat = new THREE.MeshBasicMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
-      const wfMesh = new THREE.Mesh(wfGeo, wfMat);
-      wfMesh.position.set(-22, 12, -58);
-      wfMesh.rotation.y = -Math.PI * 0.35;
-      wfMesh.rotation.x = 0.28;
-      trailsAndContoursGroup.add(wfMesh);
-    })();
-
-    // 4E. 360+ FINE-SCALE MINIATURE 3D TREES (Pine, Round Tropical, Autumn/Ipê Accents like image_5c9184.jpg!)
+    // 4C. INSTANCED TREES (280 Trees rendered in 2 single GPU draw calls!)
     const forestGroup = new THREE.Group();
     reliefGroup.add(forestGroup);
 
-    const treePalette = [0x15803d, 0x166534, 0x22c55e, 0x4d7c0f, 0xca8a04, 0xea580c];
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.9 });
-    const coneGeo = new THREE.ConeGeometry(1.4, 3.8, 6);
-    const crownGeo = new THREE.IcosahedronGeometry(1.55, 1);
+    (function buildInstancedForest() {
+      const MAX_TREES = 280;
+      const trunkGeo = new THREE.CylinderGeometry(0.28, 0.4, 1.8, 5);
+      const trunkMat = new THREE.MeshLambertMaterial({ color: 0x78350f });
+      const crownGeo = new THREE.SphereGeometry(1.85, 7, 6);
+      const crownMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
 
-    (function populateMiniatureForest() {
-      let seed = 1337;
+      const trunkInst = new THREE.InstancedMesh(trunkGeo, trunkMat, MAX_TREES);
+      const crownInst = new THREE.InstancedMesh(crownGeo, crownMat, MAX_TREES);
+
+      const dummy = new THREE.Object3D();
+      const col = new THREE.Color();
+      const greens = [0x15803d, 0x16a34a, 0x22c55e, 0x4d7c0f, 0x059669];
+
+      let seed = 99;
       function rand() {
         seed = (seed * 1664525 + 1013904223) % 4294967296;
         return seed / 4294967296;
       }
 
-      for (let i = 0; i < 380; i++) {
-        const wx = -92 + rand() * 184;
-        const wz = -92 + rand() * 184;
-        const geo = getValleyGeography(wx, wz);
-        if (geo.elev < 1.7 || geo.elev > 25.5) continue;
+      let count = 0;
+      for (let i = 0; i < 650 && count < MAX_TREES; i++) {
+        const wx = -HALF_W * 0.88 + rand() * WORLD_W * 0.88;
+        const wz = -HALF_D * 0.88 + rand() * WORLD_D * 0.88;
+        const { elev } = getTerrainGeography(wx, wz);
+        if (elev < 2.1 || elev > 19.5) continue;
 
-        // Keep clear around Farmhouse & POI centers
-        const nearPoi = state.pois.some(p => p.id !== 'forest' && Math.hypot(p.wx - wx, p.wz - wz) < 5.5);
+        const nearPoi = state.pois.some(p => p.id !== 'forest' && Math.hypot(p.wx - wx, p.wz - wz) < 9);
         if (nearPoi) continue;
 
-        // Higher density on the Island's Mata Fechada and mountain slopes
-        if (geo.zone === 'left_bank' && rand() > 0.38) continue;
+        const s = 0.75 + rand() * 0.65;
+        dummy.position.set(wx, elev + 0.8 * s, wz);
+        dummy.scale.set(s, s, s);
+        dummy.updateMatrix();
+        trunkInst.setMatrixAt(count, dummy.matrix);
 
-        const tGroup = new THREE.Group();
-        const scale = 0.65 + rand() * 0.7;
+        dummy.position.set(wx, elev + 2.5 * s, wz);
+        dummy.scale.set(s * 1.1, s * (0.9 + rand() * 0.35), s * 1.1);
+        dummy.updateMatrix();
+        crownInst.setMatrixAt(count, dummy.matrix);
 
-        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.32, 1.4, 5), trunkMat);
-        trunk.position.y = 0.7;
-        tGroup.add(trunk);
-
-        // Mostly lush greens on the island, with occasional golden Ipê / autumn accents
-        const colIdx = (rand() < 0.82) ? Math.floor(rand() * 4) : (4 + Math.floor(rand() * 2));
-        const foliageMat = new THREE.MeshStandardMaterial({
-          color: treePalette[colIdx],
-          roughness: 0.75,
-          flatShading: true
-        });
-
-        const isPine = geo.elev > 11 || rand() < 0.45;
-        const crown = new THREE.Mesh(isPine ? coneGeo : crownGeo, foliageMat);
-        crown.position.y = isPine ? 2.5 : 2.2;
-        crown.castShadow = true;
-        tGroup.add(crown);
-
-        tGroup.scale.set(scale, scale, scale);
-        tGroup.position.set(wx, geo.elev, wz);
-        forestGroup.add(tGroup);
+        col.setHex(greens[count % greens.length]);
+        crownInst.setColorAt(count, col);
+        count++;
       }
+      trunkInst.count = count;
+      crownInst.count = count;
+      trunkInst.instanceMatrix.needsUpdate = true;
+      crownInst.instanceMatrix.needsUpdate = true;
+      if (crownInst.instanceColor) crownInst.instanceColor.needsUpdate = true;
+
+      forestGroup.add(trunkInst);
+      forestGroup.add(crownInst);
     })();
 
-    // 4F. MINIATURE 3D ARCHITECTURAL LANDMARKS (Canoe, Simão's Cave & Tent, Farmhouse Complex, Clouds & Hot Air Balloon)
+    // 4D. TRAILS, WOODEN BRIDGES, JETTIES (TRAPICHES) & LANDMARK MODELS (Like image_442059.jpg!)
+    const trailsAndBridgesGroup = new THREE.Group();
+    reliefGroup.add(trailsAndBridgesGroup);
+
+    (function buildPathsAndBridges() {
+      // Sandy/Wooden Trail from Desembarque (-42, 58) -> Mata Fechada (12, -8) -> Abrigo de Simão (-36, -46)
+      const pathPts = [
+        [-42, 58], [-28, 34], [-12, 14], [12, -8], [-8, -26], [-36, -46]
+      ].map(([x, z]) => new THREE.Vector3(x, Math.max(0.8, getTerrainGeography(x, z).elev + 0.3), z));
+      const curve = new THREE.CatmullRomCurve3(pathPts);
+      const pathMesh = new THREE.Mesh(
+        new THREE.TubeGeometry(curve, 36, 1.0, 5, false),
+        new THREE.MeshLambertMaterial({ color: 0xd97706 })
+      );
+      trailsAndBridgesGroup.add(pathMesh);
+
+      // Wooden Bridges crossing the central river channel (like image_442059.jpg!)
+      const bridgeMat = new THREE.MeshLambertMaterial({ color: 0x92400e });
+      [[-10, 12], [-14, -24], [58, 8]].forEach(([bx, bz]) => {
+        const b = new THREE.Mesh(new THREE.BoxGeometry(16, 0.9, 4.2), bridgeMat);
+        b.position.set(bx, 2.4, bz);
+        trailsAndBridgesGroup.add(b);
+      });
+
+      // Wooden Jetties / Trapiches on the beaches (like image_442059.jpg!)
+      [[-46, 66, 0.3], [-92, -16, 1.4], [76, 52, -0.4]].forEach(([jx, jz, rot]) => {
+        const jetty = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.7, 13), bridgeMat);
+        jetty.position.set(jx, 1.2, jz);
+        jetty.rotation.y = rot;
+        trailsAndBridgesGroup.add(jetty);
+      });
+    })();
+
+    // Landmark 3D Models (Canoe, Simão's Hill Cave, Farmhouse, Villages/Huts)
     const structuresGroup = new THREE.Group();
     reliefGroup.add(structuresGroup);
 
-    // 1) Miniature Canoe mesh (moves/drifts when 24h flood rises!)
+    // 1) Canoe
     const canoeGroup = new THREE.Group();
-    (function buildCanoeMesh() {
-      const hullGeo = new THREE.CylinderGeometry(0.8, 0.6, 5.2, 8);
+    (function() {
+      const hullGeo = new THREE.CylinderGeometry(1.1, 0.8, 7.5, 7);
       hullGeo.rotateZ(Math.PI / 2);
       hullGeo.scale(1, 0.45, 0.55);
-      const hullMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.6 });
-      const hull = new THREE.Mesh(hullGeo, hullMat);
-      hull.position.y = 0.35;
+      const hull = new THREE.Mesh(hullGeo, new THREE.MeshLambertMaterial({ color: 0xb45309 }));
+      hull.position.y = 0.5;
       canoeGroup.add(hull);
       structuresGroup.add(canoeGroup);
     })();
 
-    // 2) Simão's Stone Cave Arch, Tent & Campfire at (14, -22)
+    // 2) Simão's Rounded-Hill Cave Entrance & Campfire (like the hill caves in image_442059.jpg!)
     const simaoGroup = new THREE.Group();
-    (function buildSimaoMesh() {
-      const caveGeo = new THREE.DodecahedronGeometry(3.8, 0);
-      const caveMat = new THREE.MeshStandardMaterial({ color: 0x64748b, flatShading: true });
-      const cave = new THREE.Mesh(caveGeo, caveMat);
-      cave.scale.set(1.2, 0.85, 1.0);
-      cave.position.set(-1.5, 1.6, -1.2);
-      simaoGroup.add(cave);
+    (function() {
+      const caveRock = new THREE.Mesh(
+        new THREE.SphereGeometry(5.2, 8, 6),
+        new THREE.MeshLambertMaterial({ color: 0x4b5563 })
+      );
+      caveRock.scale.set(1.2, 0.85, 1.0);
+      caveRock.position.set(0, 1.5, -1.5);
+      simaoGroup.add(caveRock);
 
-      // Orange/yellow explorer tent (like image_5c91df.jpg!)
-      const tentGeo = new THREE.ConeGeometry(2.1, 2.8, 4);
-      const tentMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, flatShading: true });
-      const tent = new THREE.Mesh(tentGeo, tentMat);
-      tent.position.set(2.4, 1.4, 1.2);
-      tent.rotation.y = Math.PI * 0.25;
-      simaoGroup.add(tent);
+      const darkHole = new THREE.Mesh(
+        new THREE.SphereGeometry(2.6, 7, 5),
+        new THREE.MeshBasicMaterial({ color: 0x0f172a })
+      );
+      darkHole.position.set(0, 1.2, 2.2);
+      simaoGroup.add(darkHole);
 
-      // Glowing campfire
-      const fireGeo = new THREE.ConeGeometry(0.75, 1.6, 5);
-      const fireMat = new THREE.MeshBasicMaterial({ color: 0xf97316 });
-      const fire = new THREE.Mesh(fireGeo, fireMat);
-      fire.position.set(0.5, 0.8, 2.5);
+      const fire = new THREE.Mesh(
+        new THREE.ConeGeometry(1.2, 2.5, 5),
+        new THREE.MeshBasicMaterial({ color: 0xf97316 })
+      );
+      fire.position.set(4.5, 1.2, 3.5);
       simaoGroup.add(fire);
-
       structuresGroup.add(simaoGroup);
     })();
 
-    // 3) Colonial Farmhouse Complex & Wooden Pier on the Taubaté Left Bank (-68, 54)
+    // 3) Colonial Farmhouse on Left Bank
     const farmGroup = new THREE.Group();
-    (function buildFarmComplex() {
-      const wallMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc });
-      const roofMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, flatShading: true });
-
-      // Main House
-      const body = new THREE.Mesh(new THREE.BoxGeometry(6.5, 3.2, 4.8), wallMat);
-      body.position.y = 1.6;
-      body.castShadow = true;
-      farmGroup.add(body);
-
-      const roof = new THREE.Mesh(new THREE.ConeGeometry(5.2, 2.6, 4), roofMat);
-      roof.position.y = 4.5;
+    (function() {
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(8, 3.8, 6), new THREE.MeshLambertMaterial({ color: 0xf8fafc }));
+      wall.position.y = 1.9;
+      farmGroup.add(wall);
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(6.5, 3.0, 4), new THREE.MeshLambertMaterial({ color: 0xb91c1c }));
+      roof.position.y = 5.3;
       roof.rotation.y = Math.PI / 4;
       farmGroup.add(roof);
-
-      // Barn / Paiol nearby
-      const barn = new THREE.Mesh(new THREE.BoxGeometry(4.2, 2.5, 3.4), new THREE.MeshStandardMaterial({ color: 0xfef3c7 }));
-      barn.position.set(-6.5, 1.25, -4);
-      farmGroup.add(barn);
-      const barnRoof = new THREE.Mesh(new THREE.ConeGeometry(3.5, 2.0, 4), roofMat);
-      barnRoof.position.set(-6.5, 3.5, -4);
-      barnRoof.rotation.y = Math.PI / 4;
-      farmGroup.add(barnRoof);
-
       structuresGroup.add(farmGroup);
     })();
 
-    // 4) Sky Group: Striped Hot Air Balloon + Low-Poly White Clouds (like image_5c9184.jpg!)
-    const weatherSkyGroup = new THREE.Group();
-    dioramaGroup.add(weatherSkyGroup);
-
-    const balloonGroup = new THREE.Group();
-    (function buildSkyBalloonAndClouds() {
-      // Red & white striped balloon envelope
-      const envGeo = new THREE.SphereGeometry(5.2, 16, 12);
-      envGeo.scale(1, 1.28, 1);
-      const envMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.4, flatShading: true });
-      const env = new THREE.Mesh(envGeo, envMat);
-      balloonGroup.add(env);
-
-      const basket = new THREE.Mesh(
-        new THREE.BoxGeometry(1.8, 1.4, 1.8),
-        new THREE.MeshStandardMaterial({ color: 0x92400e })
-      );
-      basket.position.y = -7.6;
-      balloonGroup.add(basket);
-      balloonGroup.position.set(-38, 62, -25);
-      weatherSkyGroup.add(balloonGroup);
-
-      // Fluffy low-poly clouds around the mountain peak
-      const cloudMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, flatShading: true });
-      const cloudCoords = [
-        [62, 54, -55, 1.2], [75, 48, -20, 0.95], [-55, 58, 25, 1.0], [18, 60, -45, 0.85]
-      ];
-      cloudCoords.forEach(([cx, cy, cz, sc]) => {
-        const cg = new THREE.Group();
-        for (let k = 0; k < 3; k++) {
-          const puff = new THREE.Mesh(new THREE.DodecahedronGeometry(3.6 - k * 0.6, 0), cloudMat);
-          puff.position.set((k - 1) * 3.0, (k % 2) * 0.8, 0);
-          cg.add(puff);
-        }
-        cg.scale.set(sc, sc * 0.65, sc);
-        cg.position.set(cx, cy, cz);
-        weatherSkyGroup.add(cg);
-      });
-    })();
-
-    // Custom Stamps 3D Container
     const customStamps3DGroup = new THREE.Group();
     reliefGroup.add(customStamps3DGroup);
 
-    function syncPoi3DPositions(isExtremeSide, timeSec) {
-      const floodLevel = isExtremeSide ? (state.rainHours / 24) * 4.8 : 0.0;
-
-      // Canoe position (drifts downriver if flood > 1.8m on extreme side!)
-      const canoePoi = state.pois.find(p => p.id === 'canoe');
-      const canoeGround = getValleyGeography(canoePoi.wx, canoePoi.wz).elev;
-      const isDrifting = isExtremeSide && (floodLevel > canoeGround + 0.5);
-      const driftZ = isDrifting ? Math.min(24, (floodLevel - canoeGround) * 4.5) : 0;
-      const driftX = isDrifting ? driftZ * 0.35 + Math.sin(timeSec * 3) * 1.2 : 0;
-      canoeGroup.position.set(
-        canoePoi.wx + driftX,
-        Math.max(canoeGround, floodLevel) + Math.sin(timeSec * 3) * 0.15,
-        canoePoi.wz + driftZ
-      );
-      canoeGroup.rotation.y = isDrifting ? (0.4 + Math.sin(timeSec * 2) * 0.25) : -0.35;
-
-      // Simão's Shelter
-      const simaoPoi = state.pois.find(p => p.id === 'simao');
-      simaoGroup.position.set(simaoPoi.wx, getValleyGeography(simaoPoi.wx, simaoPoi.wz).elev, simaoPoi.wz);
-
-      // Farmhouse
-      const farmPoi = state.pois.find(p => p.id === 'farm');
-      farmGroup.position.set(farmPoi.wx, getValleyGeography(farmPoi.wx, farmPoi.wz).elev, farmPoi.wz);
-    }
-
-    function applyScenarioStateTo3D(isExtremeSide, timeSec) {
-      const floodLevel = isExtremeSide ? (state.rainHours / 24) * 4.8 : 0.0;
+    function applyScenarioTo3D(isExtremeSide, timeSec) {
       const rainRatio = isExtremeSide ? (state.rainHours / 24) : 0.0;
+      const floodLevel = rainRatio * 4.5; // Up to +4.5m flood
 
-      // Update Water Surface Height & Color
-      waterMesh.position.y = -6.0 + floodLevel + Math.sin(timeSec * 2.2) * 0.12;
+      // Toggle pre-built vertex-colored terrain mesh (Zero lag!)
+      const showFloodHighlight = isExtremeSide && state.layers.floodRisk && rainRatio > 0.08;
+      terrainMeshNormal.visible = !showFloodHighlight;
+      terrainMeshExtreme.visible = showFloodHighlight;
+
+      // Water Level & Color (Vivid Cobalt Blue in 24h Flood instead of muddy brown!)
+      waterMesh.position.y = floodLevel + Math.sin(timeSec * 2.0) * 0.1;
       if (isExtremeSide && rainRatio > 0.1) {
-        // Muddy ochre floodwater
-        waterMat.color.setHex(0x9a5b32);
-        waterMat.opacity = 0.91;
+        waterMat.color.setHex(0x1d4ed8); // Clear, vibrant cobalt-blue floodwater!
+        waterMat.opacity = 0.86;
       } else {
-        // Crystal turquoise Rio Paraíba do Sul
-        waterMat.color.setHex(0x0ea5e9);
-        waterMat.opacity = 0.82;
+        waterMat.color.setHex(0x0ea5e9); // Natural turquoise river & sea
+        waterMat.opacity = 0.80;
       }
 
-      // Swap Vertex Colors if Flood Risk Layer is active
-      const colAttr = terrainGeo.attributes.color;
-      const srcCols = (isExtremeSide && state.layers.floodRisk && rainRatio > 0.1) ? extremeColors : normalColors;
-      colAttr.array.set(srcCols);
-      colAttr.needsUpdate = true;
+      // Update Landmark 3D positions
+      const canoePoi = state.pois[0];
+      const canoeElev = Math.max(0.5, getTerrainGeography(canoePoi.wx, canoePoi.wz).elev);
+      const drifting = isExtremeSide && (floodLevel > canoeElev + 0.4);
+      const driftOffset = drifting ? Math.min(26, (floodLevel - canoeElev) * 5.5) : 0;
+      canoeGroup.position.set(
+        canoePoi.wx + driftOffset * 0.3,
+        Math.max(canoeElev, floodLevel) + 0.2,
+        canoePoi.wz + driftOffset
+      );
 
-      // Lighting mood
-      if (isExtremeSide && rainRatio > 0.2) {
-        dirLight.intensity = 0.62;
-        hemiLight.intensity = 0.65;
-      } else {
-        dirLight.intensity = 0.95;
-        hemiLight.intensity = 0.82;
-      }
+      const simaoPoi = state.pois[1];
+      simaoGroup.position.set(simaoPoi.wx, Math.max(0.5, getTerrainGeography(simaoPoi.wx, simaoPoi.wz).elev), simaoPoi.wz);
 
-      syncPoi3DPositions(isExtremeSide, timeSec);
+      const farmPoi = state.pois[4];
+      farmGroup.position.set(farmPoi.wx, Math.max(0.5, getTerrainGeography(farmPoi.wx, farmPoi.wz).elev), farmPoi.wz);
     }
 
     // =========================================================================
-    // 5. HTML TEARDROP PINS & 2D HUD OVERLAY (Grid A-H / 1-8, Swipe, Compass)
+    // 5. COMPACT PINS WITH AUTOMATIC SCREEN-SPACE DE-OVERLAPPING
     // =========================================================================
     const pinsContainer = document.getElementById('pinsContainer');
     const pinElements = {};
@@ -1291,16 +1134,14 @@
       pinsContainer.innerHTML = '';
       state.pois.forEach(poi => {
         const el = document.createElement('div');
-        el.className = 'map-pin pointer-events-auto';
+        el.className = 'map-pin';
         el.innerHTML = `
-          <div class="flex flex-col items-center">
-            <div class="px-2 py-0.5 mb-1 rounded-full text-[10px] font-extrabold text-white shadow-md whitespace-nowrap" style="background:${poi.color}">
-              ${poi.shortLabel}
-            </div>
-            <div class="pin-teardrop" style="background:${poi.color}">
-              <span>${poi.icon}</span>
-            </div>
+          <div class="pin-badge" style="background:${poi.color}">
+            <span>${poi.icon}</span>
+            <span>${poi.shortLabel}</span>
           </div>
+          <div class="pin-stem"></div>
+          <div class="pin-dot"></div>
         `;
         el.addEventListener('pointerdown', (e) => {
           e.stopPropagation();
@@ -1331,13 +1172,14 @@
       );
       const raycaster = new THREE.Raycaster();
       raycaster.setFromCamera(ndc, camera);
-      const hits = raycaster.intersectObject(terrainMesh);
+      const hits = raycaster.intersectObject(terrainMeshNormal);
       if (hits.length > 0) {
         return { wx: hits[0].point.x, wz: hits[0].point.z };
       }
       return null;
     }
 
+    // Anti-overlap screen-space solver so labels NEVER collide at any rotation angle!
     function updateHtmlPins() {
       if (!state.layers.markers) {
         pinsContainer.classList.add('hidden');
@@ -1345,14 +1187,36 @@
       }
       pinsContainer.classList.remove('hidden');
 
-      state.pois.forEach(poi => {
-        const el = pinElements[poi.id];
+      const screenPts = state.pois.map(poi => {
+        const groundY = Math.max(0.5, getTerrainGeography(poi.wx, poi.wz).elev);
+        const scr = worldToScreen(poi.wx, groundY + 2.0, poi.wz);
+        return { id: poi.id, x: scr.x, y: scr.y, ox: scr.x, oy: scr.y };
+      });
+
+      // 3-iteration repulsion pass to prevent label overlap
+      const minW = 118, minH = 30;
+      for (let iter = 0; iter < 3; iter++) {
+        for (let i = 0; i < screenPts.length; i++) {
+          for (let j = i + 1; j < screenPts.length; j++) {
+            const a = screenPts[i], b = screenPts[j];
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            if (Math.abs(dx) < minW && Math.abs(dy) < minH) {
+              const pushY = (minH - Math.abs(dy)) * 0.55 * (dy >= 0 ? 1 : -1);
+              const pushX = (minW - Math.abs(dx)) * 0.25 * (dx >= 0 ? 1 : -1);
+              a.x -= pushX; b.x += pushX;
+              a.y -= pushY; b.y += pushY;
+            }
+          }
+        }
+      }
+
+      screenPts.forEach(pt => {
+        const el = pinElements[pt.id];
         if (!el) return;
-        const groundY = Math.max(0, getValleyGeography(poi.wx, poi.wz).elev);
-        const scr = worldToScreen(poi.wx, groundY + 2.5, poi.wz);
-        el.style.left = `${scr.x}px`;
-        el.style.top = `${scr.y}px`;
-        if (state.selectedPoiId === poi.id) {
+        el.style.left = `${Math.round(pt.x)}px`;
+        el.style.top = `${Math.round(pt.y)}px`;
+        if (state.selectedPoiId === pt.id) {
           el.classList.add('active-pin');
         } else {
           el.classList.remove('active-pin');
@@ -1360,66 +1224,94 @@
       });
     }
 
-    // Rain overlay particles for 2D HUD
-    const rainDrops = Array.from({ length: 95 }, () => ({
+    // =========================================================================
+    // 6. 2D HUD OVERLAY (20x15 Matrix Grid A-T / 1-15, River/Sea Labels, Swipe)
+    // =========================================================================
+    const rainDrops = Array.from({ length: 75 }, () => ({
       x: Math.random(),
       y: Math.random(),
-      len: 15 + Math.random() * 12,
-      speed: 0.02 + Math.random() * 0.015
+      len: 14 + Math.random() * 10,
+      speed: 0.022 + Math.random() * 0.012
     }));
 
     function draw2DHudOverlays() {
       hudCtx.clearRect(0, 0, hudCanvas.width, hudCanvas.height);
 
-      // 1. Simple Cartographic Coordinate Grid (A-H and 1-8) along the Diorama Rim
+      // 1. 20x15 Cartographic Coordinate Grid (Columns A..T x Rows 1..15)
       if (state.layers.grid) {
         hudCtx.save();
-        hudCtx.strokeStyle = 'rgba(2, 132, 199, 0.24)';
-        hudCtx.lineWidth = 1;
-        const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+        hudCtx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
+        hudCtx.lineWidth = 0.8;
 
-        for (let i = 0; i <= 8; i++) {
-          const coord = -HALF_WORLD + (i / 8) * WORLD_SIZE;
-          const p1 = worldToScreen(coord, 2, -HALF_WORLD);
-          const p2 = worldToScreen(coord, 2, HALF_WORLD);
+        for (let c = 0; c <= COLS_COUNT; c++) {
+          const wx = -HALF_W + (c / COLS_COUNT) * WORLD_W;
+          const p1 = worldToScreen(wx, 0.5, -HALF_D);
+          const p2 = worldToScreen(wx, 0.5, HALF_D);
           hudCtx.beginPath();
           hudCtx.moveTo(p1.x, p1.y);
           hudCtx.lineTo(p2.x, p2.y);
           hudCtx.stroke();
 
-          const q1 = worldToScreen(-HALF_WORLD, 2, coord);
-          const q2 = worldToScreen(HALF_WORLD, 2, coord);
+          if (c < COLS_COUNT && c % 2 === 0) {
+            const midX = -HALF_W + ((c + 0.5) / COLS_COUNT) * WORLD_W;
+            const lbl = worldToScreen(midX, 1, -HALF_D - 5);
+            hudCtx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+            hudCtx.beginPath(); hudCtx.arc(lbl.x, lbl.y, 8, 0, Math.PI * 2); hudCtx.fill();
+            hudCtx.fillStyle = '#bae6fd';
+            hudCtx.font = 'bold 9px Inter, sans-serif';
+            hudCtx.textAlign = 'center';
+            hudCtx.textBaseline = 'middle';
+            hudCtx.fillText(COL_LETTERS[c], lbl.x, lbl.y);
+          }
+        }
+
+        for (let r = 0; r <= ROWS_COUNT; r++) {
+          const wz = -HALF_D + (r / ROWS_COUNT) * WORLD_D;
+          const q1 = worldToScreen(-HALF_W, 0.5, wz);
+          const q2 = worldToScreen(HALF_W, 0.5, wz);
           hudCtx.beginPath();
           hudCtx.moveTo(q1.x, q1.y);
           hudCtx.lineTo(q2.x, q2.y);
           hudCtx.stroke();
 
-          if (i < 8) {
-            const mid = -HALF_WORLD + ((i + 0.5) / 8) * WORLD_SIZE;
-            const cPos = worldToScreen(mid, 3, -HALF_WORLD - 6);
-            hudCtx.fillStyle = 'rgba(15, 23, 42, 0.8)';
-            hudCtx.beginPath();
-            hudCtx.arc(cPos.x, cPos.y, 9, 0, Math.PI * 2);
-            hudCtx.fill();
+          if (r < ROWS_COUNT && r % 2 === 0) {
+            const midZ = -HALF_D + ((r + 0.5) / ROWS_COUNT) * WORLD_D;
+            const lbl = worldToScreen(-HALF_W - 5, 1, midZ);
+            hudCtx.fillStyle = 'rgba(2, 132, 199, 0.8)';
+            hudCtx.beginPath(); hudCtx.arc(lbl.x, lbl.y, 8, 0, Math.PI * 2); hudCtx.fill();
             hudCtx.fillStyle = '#ffffff';
-            hudCtx.font = 'bold 10px Inter, sans-serif';
+            hudCtx.font = 'bold 9px Inter, sans-serif';
             hudCtx.textAlign = 'center';
             hudCtx.textBaseline = 'middle';
-            hudCtx.fillText(cols[i], cPos.x, cPos.y);
-
-            const rPos = worldToScreen(-HALF_WORLD - 6, 3, mid);
-            hudCtx.fillStyle = 'rgba(2, 132, 199, 0.85)';
-            hudCtx.beginPath();
-            hudCtx.arc(rPos.x, rPos.y, 9, 0, Math.PI * 2);
-            hudCtx.fill();
-            hudCtx.fillStyle = '#ffffff';
-            hudCtx.fillText(String(i + 1), rPos.x, rPos.y);
+            hudCtx.fillText(String(r + 1), lbl.x, lbl.y);
           }
         }
         hudCtx.restore();
       }
 
-      // 2. Rain Streaks on Extreme Side
+      // 2. Subtle Geographic Sector Badges (Montante: Colinas Arredondadas | Várzea do Rio | Jusante: Mar)
+      hudCtx.save();
+      const sectors = [
+        { wx: -25, wy: 18, wz: -65, text: '⛰️ MONTANTE: COLINAS ARREDONDADAS', bg: 'rgba(21, 128, 61, 0.82)' },
+        { wx: -82, wy: 1,  wz: 12,  text: '🌊 RIO PARAÍBA DO SUL ↘',           bg: 'rgba(3, 105, 161, 0.82)' },
+        { wx: 15,  wy: 1,  wz: 92,  text: '⚓ JUSANTE: FOZ E MAR ABERTO',      bg: 'rgba(15, 23, 42, 0.78)' }
+      ];
+      hudCtx.font = 'bold 10px Inter, sans-serif';
+      hudCtx.textAlign = 'center';
+      hudCtx.textBaseline = 'middle';
+      sectors.forEach(s => {
+        const p = worldToScreen(s.wx, s.wy, s.wz);
+        const tw = hudCtx.measureText(s.text).width + 14;
+        hudCtx.fillStyle = s.bg;
+        hudCtx.beginPath();
+        hudCtx.roundRect(p.x - tw / 2, p.y - 9, tw, 18, 6);
+        hudCtx.fill();
+        hudCtx.fillStyle = '#ffffff';
+        hudCtx.fillText(s.text, p.x, p.y);
+      });
+      hudCtx.restore();
+
+      // 3. Rain Streaks on Extreme Side
       if (state.layers.weather && state.viewMode !== 'normal' && state.rainHours > 1) {
         const rainRatio = state.rainHours / 24;
         const maxX = state.viewMode === 'swipe' ? (hudCanvas.width * state.swipePercent / 100) : hudCanvas.width;
@@ -1427,8 +1319,8 @@
         hudCtx.beginPath();
         hudCtx.rect(0, 0, maxX, hudCanvas.height);
         hudCtx.clip();
-        hudCtx.strokeStyle = `rgba(3, 105, 161, ${0.22 + rainRatio * 0.28})`;
-        hudCtx.lineWidth = 1.4;
+        hudCtx.strokeStyle = `rgba(186, 230, 253, ${0.25 + rainRatio * 0.3})`;
+        hudCtx.lineWidth = 1.2;
         const count = Math.floor(rainDrops.length * rainRatio);
         for (let i = 0; i < count; i++) {
           const d = rainDrops[i];
@@ -1436,92 +1328,73 @@
           const ry = d.y * hudCanvas.height;
           hudCtx.beginPath();
           hudCtx.moveTo(rx, ry);
-          hudCtx.lineTo(rx - 4, ry + d.len);
+          hudCtx.lineTo(rx - 3, ry + d.len);
           hudCtx.stroke();
         }
         hudCtx.restore();
       }
 
-      // 3. Swipe Curtain Divider Line & Handle
+      // 4. Swipe Divider Curtain
       if (state.viewMode === 'swipe') {
         const splitX = (hudCanvas.width * state.swipePercent) / 100;
         const cy = hudCanvas.height * 0.48;
 
         hudCtx.save();
-        hudCtx.strokeStyle = '#0284c7';
+        hudCtx.strokeStyle = '#38bdf8';
         hudCtx.lineWidth = 3;
         hudCtx.beginPath();
         hudCtx.moveTo(splitX, 0);
         hudCtx.lineTo(splitX, hudCanvas.height);
         hudCtx.stroke();
 
-        // Left & Right Scenario Badges attached to the curtain
-        hudCtx.fillStyle = 'rgba(154, 52, 18, 0.92)';
+        hudCtx.fillStyle = 'rgba(29, 78, 216, 0.92)';
         hudCtx.beginPath();
-        hudCtx.roundRect(splitX - 152, cy - 48, 140, 26, 8);
+        hudCtx.roundRect(splitX - 148, cy - 44, 136, 24, 8);
         hudCtx.fill();
         hudCtx.fillStyle = '#ffffff';
-        hudCtx.font = 'bold 11px Inter, sans-serif';
+        hudCtx.font = 'bold 10px Inter, sans-serif';
         hudCtx.textAlign = 'center';
         hudCtx.textBaseline = 'middle';
-        hudCtx.fillText(`⛈️ CHUVA ${state.rainHours.toFixed(0)}h (ATUAL)`, splitX - 82, cy - 35);
+        hudCtx.fillText(`🌊 CHEIA ${state.rainHours.toFixed(0)}h (+4,5m)`, splitX - 80, cy - 32);
 
         hudCtx.fillStyle = 'rgba(21, 128, 61, 0.92)';
         hudCtx.beginPath();
-        hudCtx.roundRect(splitX + 12, cy - 48, 140, 26, 8);
+        hudCtx.roundRect(splitX + 12, cy - 44, 136, 24, 8);
         hudCtx.fill();
         hudCtx.fillStyle = '#ffffff';
-        hudCtx.fillText('☀️ LIVRO (1944)', splitX + 82, cy - 35);
+        hudCtx.fillText('☀️ NORMAL (1944)', splitX + 80, cy - 32);
 
-        // Center Round Handle
         hudCtx.fillStyle = '#ffffff';
         hudCtx.strokeStyle = '#0284c7';
-        hudCtx.lineWidth = 3.5;
+        hudCtx.lineWidth = 3;
         hudCtx.beginPath();
-        hudCtx.arc(splitX, cy, 20, 0, Math.PI * 2);
+        hudCtx.arc(splitX, cy, 18, 0, Math.PI * 2);
         hudCtx.fill();
         hudCtx.stroke();
 
         hudCtx.fillStyle = '#0284c7';
-        hudCtx.font = 'bold 14px Inter, sans-serif';
+        hudCtx.font = 'bold 13px Inter, sans-serif';
         hudCtx.fillText('⟷', splitX, cy + 1);
         hudCtx.restore();
       }
 
-      // 3B. Geographic Water Labels (Rio Paraíba do Sul -> Foz / Deságue no Mar -> A Ilha Perdida)
-      hudCtx.save();
-      const riverLbl = worldToScreen(-38, 1, -28);
-      const seaLbl = worldToScreen(64, 1, 64);
-      hudCtx.font = 'bold 11px Inter, sans-serif';
-      hudCtx.textAlign = 'center';
-      hudCtx.fillStyle = 'rgba(15, 23, 42, 0.72)';
-      hudCtx.beginPath(); hudCtx.roundRect(riverLbl.x - 68, riverLbl.y - 10, 136, 20, 6); hudCtx.fill();
-      hudCtx.fillStyle = '#bae6fd';
-      hudCtx.fillText('🌊 RIO PARAÍBA DO SUL ↘', riverLbl.x, riverLbl.y + 1);
-
-      hudCtx.fillStyle = 'rgba(15, 23, 42, 0.72)';
-      hudCtx.beginPath(); hudCtx.roundRect(seaLbl.x - 74, seaLbl.y - 10, 148, 20, 6); hudCtx.fill();
-      hudCtx.fillStyle = '#7dd3fc';
-      hudCtx.fillText('⚓ FOZ DO RIO / MAR ABERTO', seaLbl.x, seaLbl.y + 1);
-      hudCtx.restore();
-
-      // 4. Ornate Compass Rose (Rosa dos Ventos) at Top-Right
+      // 5. Compass Rose (Rosa dos Ventos)
       drawCompassRoseHUD();
 
-      // 5. Ruler Overlay
+      // 6. Ruler Overlay
       if (state.rulerPoints.length > 0) {
         hudCtx.save();
-        const pts = state.rulerPoints.map(p => worldToScreen(p.wx, Math.max(0, getValleyGeography(p.wx, p.wz).elev) + 1, p.wz));
-        hudCtx.fillStyle = '#d97706';
+        const pts = state.rulerPoints.map(p => worldToScreen(p.wx, Math.max(0.5, getTerrainGeography(p.wx, p.wz).elev) + 1, p.wz));
+        hudCtx.fillStyle = '#facc15';
         pts.forEach(p => {
           hudCtx.beginPath();
-          hudCtx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+          hudCtx.arc(p.x, p.y, 5, 0, Math.PI * 2);
           hudCtx.fill();
         });
         if (pts.length === 2) {
-          hudCtx.strokeStyle = '#d97706';
-          hudCtx.lineWidth = 2.5;
-          hudCtx.setLineDash([6, 4]);
+          hudCtx.strokeStyle = '#facc15';
+          hudCtx.lineWidth = 2.2;
+          hudCtx.setLineDash([5, 4]);
           hudCtx.beginPath();
           hudCtx.moveTo(pts[0].x, pts[0].y);
           hudCtx.lineTo(pts[1].x, pts[1].y);
@@ -1531,39 +1404,39 @@
           const distM = Math.round(Math.hypot(
             state.rulerPoints[1].wx - state.rulerPoints[0].wx,
             state.rulerPoints[1].wz - state.rulerPoints[0].wz
-          ) * 2.5);
+          ) * 2.2);
           const mx = (pts[0].x + pts[1].x) / 2;
-          const my = (pts[0].y + pts[1].y) / 2 - 14;
+          const my = (pts[0].y + pts[1].y) / 2 - 12;
           hudCtx.fillStyle = '#0f172a';
           hudCtx.beginPath();
-          hudCtx.roundRect(mx - 52, my - 12, 104, 24, 8);
+          hudCtx.roundRect(mx - 48, my - 11, 96, 22, 7);
           hudCtx.fill();
           hudCtx.fillStyle = '#fde047';
           hudCtx.font = 'bold 11px Inter, sans-serif';
           hudCtx.textAlign = 'center';
           hudCtx.textBaseline = 'middle';
-          hudCtx.fillText(`📏 ${distM} metros`, mx, my);
+          hudCtx.fillText(`📏 ${distM} m`, mx, my);
         }
         hudCtx.restore();
       }
     }
 
     function drawCompassRoseHUD() {
-      const cx = hudCanvas.width - 54;
-      const cy = 118;
-      const r = 28;
+      const cx = hudCanvas.width - 48;
+      const cy = 104;
+      const r = 24;
       hudCtx.save();
       hudCtx.translate(cx, cy);
 
-      hudCtx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+      hudCtx.fillStyle = 'rgba(255, 255, 255, 0.94)';
       hudCtx.strokeStyle = 'rgba(15, 23, 42, 0.18)';
       hudCtx.lineWidth = 1.5;
       hudCtx.beginPath();
-      hudCtx.arc(0, 0, r + 6, 0, Math.PI * 2);
+      hudCtx.arc(0, 0, r + 5, 0, Math.PI * 2);
       hudCtx.fill();
       hudCtx.stroke();
 
-      hudCtx.rotate(-state.cameraAngle + Math.PI / 4);
+      hudCtx.rotate(-state.cameraAngle + Math.PI / 2);
       const dirs = [
         { lbl: 'N', ang: -Math.PI / 2, col: '#e11d48' },
         { lbl: 'L', ang: 0, col: '#334155' },
@@ -1575,22 +1448,22 @@
         hudCtx.rotate(d.ang);
         hudCtx.fillStyle = d.col;
         hudCtx.beginPath();
-        hudCtx.moveTo(0, -4);
-        hudCtx.lineTo(r * 0.65, 0);
-        hudCtx.lineTo(0, 4);
+        hudCtx.moveTo(0, -3.5);
+        hudCtx.lineTo(r * 0.64, 0);
+        hudCtx.lineTo(0, 3.5);
         hudCtx.closePath();
         hudCtx.fill();
-        hudCtx.font = 'bold 9px Inter, sans-serif';
+        hudCtx.font = 'bold 8px Inter, sans-serif';
         hudCtx.textAlign = 'center';
         hudCtx.textBaseline = 'middle';
-        hudCtx.fillText(d.lbl, r * 0.86, 0);
+        hudCtx.fillText(d.lbl, r * 0.85, 0);
         hudCtx.restore();
       });
       hudCtx.restore();
     }
 
     // =========================================================================
-    // 6. MAIN RENDER & ANIMATION LOOP (With Dual-Pass Scissor for Swipe!)
+    // 7. 60FPS ANIMATION LOOP
     // =========================================================================
     let prevTime = performance.now();
 
@@ -1600,41 +1473,31 @@
       const timeSec = now / 1000;
 
       if (state.simPlaying) {
-        state.rainHours += dt * 2.5;
+        state.rainHours += dt * 2.6;
         if (state.rainHours > 24) state.rainHours = 0;
         syncSimulatorUI();
       }
 
-      // Smoothly interpolate camera toward target
-      state.cameraAngle += (state.targetCameraAngle - state.cameraAngle) * 0.12;
-      state.cameraZoom += (state.targetCameraZoom - state.cameraZoom) * 0.12;
-      state.cameraTarget.x += (state.targetCameraCenter.x - state.cameraTarget.x) * 0.12;
-      state.cameraTarget.z += (state.targetCameraCenter.z - state.cameraTarget.z) * 0.12;
+      // Snappy, responsive camera interpolation
+      state.cameraAngle += (state.targetCameraAngle - state.cameraAngle) * 0.18;
+      state.cameraZoom += (state.targetCameraZoom - state.cameraZoom) * 0.18;
+      state.cameraTarget.x += (state.targetCameraCenter.x - state.cameraTarget.x) * 0.18;
+      state.cameraTarget.z += (state.targetCameraCenter.z - state.cameraTarget.z) * 0.18;
 
-      // Update Orthographic Camera Position & Zoom
-      const dist = 260;
+      const dist = 320;
       camera.position.set(
         state.cameraTarget.x + Math.cos(state.cameraAngle) * dist,
         dist * Math.sin(state.cameraPitch),
         state.cameraTarget.z + Math.sin(state.cameraAngle) * dist
       );
-      camera.lookAt(state.cameraTarget.x, 6 * state.verticalExag, state.cameraTarget.z);
+      camera.lookAt(state.cameraTarget.x, 3 * state.verticalExag, state.cameraTarget.z);
       camera.zoom = state.cameraZoom;
       camera.updateProjectionMatrix();
 
-      // Apply Vertical Exaggeration
       reliefGroup.scale.y = state.verticalExag;
-
-      // Layer visibilities
       forestGroup.visible = state.layers.forest;
-      trailsAndContoursGroup.visible = state.layers.relief;
-      weatherSkyGroup.visible = state.layers.weather;
+      trailsAndBridgesGroup.visible = state.layers.relief;
 
-      // Gently animate hot air balloon
-      balloonGroup.position.y = 60 + Math.sin(timeSec * 0.9) * 2.2;
-      balloonGroup.rotation.y = timeSec * 0.15;
-
-      // Advance 2D raindrops
       rainDrops.forEach(d => {
         d.y += d.speed;
         if (d.y > 1) { d.y = 0; d.x = Math.random(); }
@@ -1647,23 +1510,21 @@
         const splitX = Math.round((w * state.swipePercent) / 100);
         renderer.setScissorTest(true);
 
-        // Pass 1: Left Side -> Extreme 24h Rain Scenario
         renderer.setViewport(0, 0, w, h);
         renderer.setScissor(0, 0, splitX, h);
-        applyScenarioStateTo3D(true, timeSec);
+        applyScenarioTo3D(true, timeSec);
         renderer.render(scene, camera);
 
-        // Pass 2: Right Side -> Normal 1944 Book Scenario
         renderer.setViewport(0, 0, w, h);
         renderer.setScissor(splitX, 0, w - splitX, h);
-        applyScenarioStateTo3D(false, timeSec);
+        applyScenarioTo3D(false, timeSec);
         renderer.render(scene, camera);
 
         renderer.setScissorTest(false);
       } else {
         renderer.setScissorTest(false);
         renderer.setViewport(0, 0, w, h);
-        applyScenarioStateTo3D(state.viewMode === 'extreme', timeSec);
+        applyScenarioTo3D(state.viewMode === 'extreme', timeSec);
         renderer.render(scene, camera);
       }
 
@@ -1674,72 +1535,72 @@
     }
 
     // =========================================================================
-    // 7. GUIDED 5-STEP SCHOOL PRESENTATION ROADMAP
+    // 8. 5-STEP GUIDED PRESENTATION ROADMAP
     // =========================================================================
     const presentationSteps = [
       {
         badge: 'Passo 1 de 5',
-        title: '1. O Vale do Rio Paraíba do Sul e a Ilha Fluvial (1944)',
-        text: '💬 Para explicar à turma: "Aqui vemos o Rio Paraíba do Sul cortando o vale entre a Fazenda dos Padrinhos (margem esquerda) e a Serra (margem direita). No meio do rio fica a Ilha Perdida, com Escala Fictícia, Rosa dos Ventos, Legenda e Coordenadas A–H / 1–8."',
+        title: '1. Colinas Arredondadas na Montante, Várzea do Rio e Mar na Jusante',
+        text: '💬 Para explicar à turma: "Na montante (parte alta) temos colinas verdes arredondadas de onde o Rio Paraíba do Sul desce, atravessando as áreas de várzea e dividindo-se ao redor da Ilha Perdida até desaguar no mar na jusante. A matriz 20×15 (A–T e 1–15) traz Escala Fictícia, Rosa dos Ventos e Legenda."',
         action() {
           setViewMode('normal');
-          state.targetCameraAngle = Math.PI * 0.25;
-          state.targetCameraZoom = 1.0;
-          state.targetCameraCenter = { x: 0, z: 0 };
+          state.targetCameraAngle = Math.PI * 0.42;
+          state.targetCameraZoom = 0.80;
+          state.targetCameraCenter = { x: 0, z: 4 };
           selectPoi('farm');
         }
       },
       {
         badge: 'Passo 2 de 5',
         title: '2. Os Lugares da História de Maria José Dupré',
-        text: '💬 Para explicar à turma: "Henrique e Eduardo saem da Fazenda (B6) e desembarcam na praia baixa da ilha (D5, a 1,6m). No interior há a Mata Fechada (D4), as várzeas de risco (E5) e, no ponto mais alto (26m), o Abrigo de Simão (E3)."',
+        text: '💬 Para explicar à turma: "Henrique e Eduardo saem da Fazenda (D6) e desembarcam na praia baixa da ilha (G12, a 1,5m). No centro há a Mata Fechada (K8), as várzeas de inundação (N11) e, nas colinas arredondadas da montante (22m), o Abrigo de Simão (H4)."',
         action() {
           setViewMode('normal');
-          state.targetCameraAngle = Math.PI * 0.32;
-          state.targetCameraZoom = 1.28;
-          state.targetCameraCenter = { x: 0, z: 4 };
+          state.targetCameraAngle = Math.PI * 0.48;
+          state.targetCameraZoom = 0.92;
+          state.targetCameraCenter = { x: -8, z: 12 };
           selectPoi('canoe');
         }
       },
       {
         badge: 'Passo 3 de 5',
         title: '3. Evento Climático Extremo: Chuva de 1 Mês em 24 Horas (250 mm)',
-        text: '💬 Para explicar à turma: "Com as mudanças climáticas, tempestades extremas despejam 250 mm em apenas 24h. O Rio Paraíba sobe +4,8m com água barrenta, encobre a praia de desembarque e arrasta a canoa rio abaixo!"',
+        text: '💬 Para explicar à turma: "Com as mudanças climáticas, uma chuva extrema despeja 250 mm em 24h. O rio sobe +4,5m (destacado em azul-cobalto), cobre a praia de desembarque e a várzea, e arrasta a canoa para o mar!"',
         action() {
           state.rainHours = 24;
           syncSimulatorUI();
           setViewMode('extreme');
-          state.targetCameraAngle = Math.PI * 0.22;
-          state.targetCameraZoom = 1.25;
-          state.targetCameraCenter = { x: -4, z: 12 };
+          state.targetCameraAngle = Math.PI * 0.40;
+          state.targetCameraZoom = 0.90;
+          state.targetCameraCenter = { x: 0, z: 15 };
           selectPoi('canoe');
         }
       },
       {
         badge: 'Passo 4 de 5',
-        title: '4. O que Muda no Mapa? (Comparação Lado a Lado na Mesma Planta)',
-        text: '💬 Para explicar à turma: "Usando cores diferentes na mesma planta com a Cortina Swipe, vemos que quase metade da ilha e as várzeas (em vermelho/ocre) ficam submersas, aumentando a erosão nas margens do rio."',
+        title: '4. O que Muda no Mapa? (Cortina Swipe na Mesma Planta)',
+        text: '💬 Para explicar à turma: "Comparando os dois cenários na mesma planta com a Cortina Swipe, vemos claramente em azul-celeste toda a várzea do rio e as praias submersas pela enchente de 24h."',
         action() {
           state.rainHours = 24;
           state.swipePercent = 50;
           document.getElementById('swipeSlider').value = 50;
           syncSimulatorUI();
           setViewMode('swipe');
-          state.targetCameraAngle = Math.PI * 0.25;
-          state.targetCameraZoom = 1.08;
-          state.targetCameraCenter = { x: 0, z: 0 };
+          state.targetCameraAngle = Math.PI * 0.42;
+          state.targetCameraZoom = 0.82;
+          state.targetCameraCenter = { x: 0, z: 4 };
           selectPoi('flood');
         }
       },
       {
         badge: 'Passo 5 de 5',
-        title: '5. A Importância do Relevo Alto e da Mata Fechada',
-        text: '💬 Para explicar à turma: "Enquanto as áreas baixas alagam, o Abrigo de Simão (E3) fica a 26m de altitude no morro rochoso — totalmente seguro! E a Mata Fechada protege o solo das encostas contra desmoronamentos."',
+        title: '5. Por que o Abrigo de Simão Permanece Seguro?',
+        text: '💬 Para explicar à turma: "Enquanto a várzea baixa próxima à jusante alaga, o Abrigo de Simão (H4) fica a 22m de altitude nas colinas arredondadas da montante — totalmente protegido da enchente!"',
         action() {
           setViewMode('swipe');
-          state.targetCameraAngle = Math.PI * 0.15;
-          state.targetCameraZoom = 1.35;
-          state.targetCameraCenter = { x: 10, z: -15 };
+          state.targetCameraAngle = Math.PI * 0.35;
+          state.targetCameraZoom = 1.02;
+          state.targetCameraCenter = { x: -20, z: -25 };
           selectPoi('simao');
         }
       }
@@ -1754,19 +1615,19 @@
 
       document.querySelectorAll('.step-pill').forEach((btn, i) => {
         btn.className = (i === state.presentationStep)
-          ? 'step-pill px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white shadow-sm transition-all'
-          : 'step-pill px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all';
+          ? 'step-pill px-2 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-600 text-white shadow-sm transition-all'
+          : 'step-pill px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all';
       });
       step.action();
     }
 
     // =========================================================================
-    // 8. UI SYNC & CONTROLS WIRING
+    // 9. UI SYNC & CONTROLS
     // =========================================================================
     function syncSimulatorUI() {
       document.getElementById('rainSlider').value = state.rainHours;
       const rainMm = Math.round((state.rainHours / 24) * 250);
-      const riverRise = ((state.rainHours / 24) * 4.8).toFixed(1).replace('.', ',');
+      const riverRise = ((state.rainHours / 24) * 4.5).toFixed(1).replace('.', ',');
       document.getElementById('metricHours').textContent = `${state.rainHours.toFixed(1).replace('.', ',')} h`;
       document.getElementById('metricRainMm').textContent = `${rainMm} mm`;
       document.getElementById('metricRiverLevel').textContent = `+${riverRise} m`;
@@ -1793,7 +1654,7 @@
         swipeBox.classList.add('hidden');
         SoundEngine.playBirdChirp();
       } else {
-        btnExtreme.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-600 text-white shadow-sm transition-all flex items-center gap-1.5';
+        btnExtreme.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-sm transition-all flex items-center gap-1.5';
         swipeBox.classList.add('hidden');
         SoundEngine.playThunder();
       }
@@ -1803,7 +1664,7 @@
 
     function selectPoi(id) {
       state.selectedPoiId = id;
-      SoundEngine.playTone(620, 0.07, 'triangle', 0.06);
+      SoundEngine.playTone(620, 0.06, 'triangle', 0.05);
       updateSelectedPoiCard();
       document.querySelectorAll('.poi-pill').forEach(btn => {
         const active = btn.getAttribute('data-select-poi') === id;
@@ -1815,16 +1676,16 @@
 
     function updateSelectedPoiCard() {
       const poi = state.pois.find(p => p.id === state.selectedPoiId) || state.pois[0];
-      const elev = Math.max(0.5, getValleyGeography(poi.wx, poi.wz).elev);
+      const elev = Math.max(0.5, getTerrainGeography(poi.wx, poi.wz).elev);
       const coord = worldToCoordLabel(poi.wx, poi.wz);
-      const floodZ = state.viewMode === 'normal' ? 0 : (state.rainHours / 24) * 4.8;
+      const floodZ = state.viewMode === 'normal' ? 0 : (state.rainHours / 24) * 4.5;
       const isFlooded = floodZ > elev + 0.2;
 
       document.getElementById('poiBadge').textContent = `Quadrante ${coord} • Cota ${elev.toFixed(1).replace('.', ',')} m`;
       const statusEl = document.getElementById('poiStatusBadge');
       if (isFlooded) {
         statusEl.textContent = `🌊 Alagado (+${floodZ.toFixed(1).replace('.', ',')}m)`;
-        statusEl.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800';
+        statusEl.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800';
       } else {
         statusEl.textContent = '✅ Seguro (Acima da Cheia)';
         statusEl.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800';
@@ -1850,73 +1711,61 @@
         const el = document.getElementById(id);
         if (!el) return;
         el.className = (k === toolName)
-          ? 'px-2 py-1 rounded-lg text-[11px] font-bold bg-emerald-600 text-white shadow-sm'
-          : 'px-2 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200';
+          ? 'px-2 py-1 rounded-lg text-[10px] font-bold bg-emerald-600 text-white shadow-sm'
+          : 'px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200';
       });
     }
 
     function addCustomStamp3D(wx, wz, kind) {
-      const y = Math.max(0, getValleyGeography(wx, wz).elev);
-      const g = new THREE.Group();
-      if (kind === 'tree') {
-        const crown = new THREE.Mesh(coneGeo, new THREE.MeshStandardMaterial({ color: 0x16a34a, flatShading: true }));
-        crown.position.y = 2.4;
-        g.add(crown);
-      } else {
-        const sphere = new THREE.Mesh(
-          new THREE.SphereGeometry(1.5, 8, 8),
-          new THREE.MeshStandardMaterial({ color: kind === 'alert' ? 0xe11d48 : 0xf59e0b })
-        );
-        sphere.position.y = 1.5;
-        g.add(sphere);
-      }
-      g.position.set(wx, y, wz);
-      customStamps3DGroup.add(g);
+      const y = Math.max(0.5, getTerrainGeography(wx, wz).elev);
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(2.0, 7, 6),
+        new THREE.MeshLambertMaterial({ color: kind === 'tree' ? 0x16a34a : (kind === 'alert' ? 0xe11d48 : 0xf59e0b) })
+      );
+      mesh.position.set(wx, y + 1.8, wz);
+      customStamps3DGroup.add(mesh);
     }
 
     function updateScaleBarUI() {
-      const metersPer100Px = Math.round(100 / state.targetCameraZoom);
+      const metersPer100Px = Math.round(120 / state.targetCameraZoom);
       document.getElementById('scaleMidLabel').textContent = `${Math.round(metersPer100Px / 2)}m`;
       document.getElementById('scaleEndLabel').textContent = `${metersPer100Px}m`;
       document.getElementById('zoomReadout').textContent = `${Math.round(state.targetCameraZoom * 100)}%`;
     }
 
     // =========================================================================
-    // 9. CANVAS POINTER & WHEEL INTERACTION
+    // 10. POINTER & WHEEL INTERACTION
     // =========================================================================
     hudCanvas.addEventListener('pointerdown', (e) => {
       SoundEngine.init();
       const x = e.clientX;
       const y = e.clientY;
 
-      // 1. Compass click
-      if (Math.hypot(x - (hudCanvas.width - 54), y - 118) <= 34) {
+      if (Math.hypot(x - (hudCanvas.width - 48), y - 104) <= 30) {
         state.targetCameraAngle += Math.PI / 2;
-        SoundEngine.playTone(540, 0.06);
+        SoundEngine.playTone(540, 0.05);
         return;
       }
 
-      // 2. Swipe Divider Drag
       if (state.viewMode === 'swipe') {
         const splitX = (hudCanvas.width * state.swipePercent) / 100;
-        if (Math.abs(x - splitX) <= 24) {
+        if (Math.abs(x - splitX) <= 22) {
           state.draggingSwipe = true;
           return;
         }
       }
 
-      // 3. Raycast onto 3D Terrain for Ruler or Stamps
       if (state.activeTool === 'ruler' || state.activeTool.startsWith('stamp_')) {
         const hit = screenToWorldOnGround(x, y);
         if (hit) {
           if (state.activeTool === 'ruler') {
             if (state.rulerPoints.length >= 2) state.rulerPoints = [];
             state.rulerPoints.push(hit);
-            SoundEngine.playTone(700, 0.06);
+            SoundEngine.playTone(700, 0.05);
           } else {
             const kind = state.activeTool.replace('stamp_', '');
             addCustomStamp3D(hit.wx, hit.wz, kind);
-            SoundEngine.playTone(640, 0.08);
+            SoundEngine.playTone(640, 0.06);
           }
           return;
         }
@@ -1941,8 +1790,8 @@
         if (hit) {
           const poi = state.pois.find(p => p.id === state.draggingPoiId);
           if (poi) {
-            poi.wx = Math.max(-88, Math.min(88, hit.wx));
-            poi.wz = Math.max(-88, Math.min(88, hit.wz));
+            poi.wx = Math.max(-HALF_W * 0.9, Math.min(HALF_W * 0.9, hit.wx));
+            poi.wz = Math.max(-HALF_D * 0.9, Math.min(HALF_D * 0.9, hit.wz));
             updateSelectedPoiCard();
           }
         }
@@ -1952,18 +1801,10 @@
       if (state.draggingOrbit) {
         const dx = x - state.pointerPrev.x;
         const dy = y - state.pointerPrev.y;
-        state.targetCameraAngle += dx * 0.0065;
-        state.cameraPitch = Math.max(0.35, Math.min(1.05, state.cameraPitch + dy * 0.004));
+        state.targetCameraAngle += dx * 0.006;
+        state.cameraPitch = Math.max(0.38, Math.min(1.05, state.cameraPitch + dy * 0.004));
         state.pointerPrev = { x, y };
         return;
-      }
-
-      // Update live coordinates & altitude on hover
-      const hit = screenToWorldOnGround(x, y);
-      if (hit) {
-        const elev = Math.max(0, getValleyGeography(hit.wx, hit.wz).elev);
-        document.getElementById('hudCoord').textContent = `Quadrante ${worldToCoordLabel(hit.wx, hit.wz)}`;
-        document.getElementById('hudElev').textContent = `${elev.toFixed(1).replace('.', ',')} m`;
       }
     });
 
@@ -1976,7 +1817,7 @@
     hudCanvas.addEventListener('wheel', (e) => {
       e.preventDefault();
       const factor = e.deltaY < 0 ? 1.12 : 0.89;
-      state.targetCameraZoom = Math.max(0.65, Math.min(2.4, state.targetCameraZoom * factor));
+      state.targetCameraZoom = Math.max(0.55, Math.min(2.2, state.targetCameraZoom * factor));
       updateScaleBarUI();
     }, { passive: false });
 
@@ -1995,7 +1836,7 @@
     }
 
     // =========================================================================
-    // 10. INITIALIZATION & DOM LISTENERS
+    // 11. INITIALIZE DOM LISTENERS
     // =========================================================================
     window.addEventListener('load', () => {
       onWindowResize();
@@ -2056,18 +1897,18 @@
           customStamps3DGroup.remove(customStamps3DGroup.children[0]);
         }
         state.rulerPoints = [];
-        state.targetCameraAngle = Math.PI * 0.25;
-        state.cameraPitch = 0.62;
-        state.targetCameraZoom = 1.0;
-        state.targetCameraCenter = { x: 0, z: 0 };
-        state.verticalExag = 2.2;
-        document.getElementById('exagSlider').value = 2.2;
-        document.getElementById('exagReadout').textContent = '2.2x';
-        state.pois[0].wx = -6;  state.pois[0].wz = 34;
-        state.pois[1].wx = 26;  state.pois[1].wz = -4;
-        state.pois[2].wx = 8;   state.pois[2].wz = 14;
-        state.pois[3].wx = 28;  state.pois[3].wz = 38;
-        state.pois[4].wx = -68; state.pois[4].wz = 22;
+        state.targetCameraAngle = Math.PI * 0.42;
+        state.cameraPitch = 0.64;
+        state.targetCameraZoom = 0.80;
+        state.targetCameraCenter = { x: 0, z: 4 };
+        state.verticalExag = 1.8;
+        document.getElementById('exagSlider').value = 1.8;
+        document.getElementById('exagReadout').textContent = '1.8x';
+        state.pois[0].wx = -42;  state.pois[0].wz = 58;
+        state.pois[1].wx = -36;  state.pois[1].wz = -46;
+        state.pois[2].wx = 12;   state.pois[2].wz = -8;
+        state.pois[3].wx = 52;   state.pois[3].wz = 36;
+        state.pois[4].wx = -112; state.pois[4].wz = -18;
         state.rainHours = 24;
         state.swipePercent = 50;
         document.getElementById('swipeSlider').value = 50;
@@ -2081,7 +1922,6 @@
         btn.addEventListener('click', () => selectPoi(btn.getAttribute('data-select-poi')));
       });
 
-      // Camera Rotate & Zoom Buttons
       document.getElementById('btnRotateLeft').addEventListener('click', () => {
         state.targetCameraAngle -= Math.PI / 4;
         SoundEngine.playTone(500, 0.05);
@@ -2091,22 +1931,21 @@
         SoundEngine.playTone(550, 0.05);
       });
       document.getElementById('btnZoomIn').addEventListener('click', () => {
-        state.targetCameraZoom = Math.min(2.4, state.targetCameraZoom * 1.2);
+        state.targetCameraZoom = Math.min(2.2, state.targetCameraZoom * 1.18);
         updateScaleBarUI();
       });
       document.getElementById('btnZoomOut').addEventListener('click', () => {
-        state.targetCameraZoom = Math.max(0.65, state.targetCameraZoom / 1.2);
+        state.targetCameraZoom = Math.max(0.55, state.targetCameraZoom / 1.18);
         updateScaleBarUI();
       });
       document.getElementById('btnCenterCamera').addEventListener('click', () => {
-        state.targetCameraAngle = Math.PI * 0.25;
-        state.cameraPitch = 0.62;
-        state.targetCameraZoom = 1.0;
-        state.targetCameraCenter = { x: 0, z: 0 };
+        state.targetCameraAngle = Math.PI * 0.42;
+        state.cameraPitch = 0.64;
+        state.targetCameraZoom = 0.80;
+        state.targetCameraCenter = { x: 0, z: 4 };
         updateScaleBarUI();
       });
 
-      // Collapsible Left & Right Cards
       document.getElementById('btnToggleLeftDock').addEventListener('click', () => {
         const c = document.getElementById('leftDockContent');
         const hidden = c.classList.toggle('hidden');
@@ -2118,7 +1957,6 @@
         document.getElementById('rightDockChevron').textContent = hidden ? '▸' : '▾';
       });
 
-      // Sound Toggle
       document.getElementById('btnToggleSound').addEventListener('click', () => {
         SoundEngine.init();
         SoundEngine.enabled = !SoundEngine.enabled;
@@ -2127,7 +1965,6 @@
         SoundEngine.updateWeatherAudio();
       });
 
-      // Welcome Modal
       const welcomeModal = document.getElementById('welcomeModal');
       const closeWelcome = () => {
         welcomeModal.classList.add('hidden');
@@ -2150,7 +1987,6 @@
         });
       });
 
-      // Presentation Roadmap Step Buttons
       const presBanner = document.getElementById('presentationBanner');
       document.querySelectorAll('.step-pill').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -2176,6 +2012,7 @@
         setPresentationStep(state.presentationStep + 1);
       });
 
+      updateScaleBarUI();
       syncSimulatorUI();
       requestAnimationFrame(animate);
     });
