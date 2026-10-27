@@ -1257,10 +1257,36 @@
       hull.position.y = 0.5;
       canoeGroup.add(hull);
       const seatMat = new THREE.MeshLambertMaterial({ color: 0xd6a56b });
+      const darkWoodMat = new THREE.MeshLambertMaterial({ color: 0x63351f });
+      const edgeMat = new THREE.MeshLambertMaterial({ color: 0xc88745 });
       [-1.15, 1.15].forEach(x => {
-        const seat = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.13, 1.3), seatMat);
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.16, 1.3), seatMat);
         seat.position.set(x, 0.82, 0);
         canoeGroup.add(seat);
+        const seatSupport = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.34, 0.16), darkWoodMat);
+        seatSupport.position.set(x, 0.66, -0.45);
+        canoeGroup.add(seatSupport);
+      });
+      // Raised gunwales, warm timber trim and a visible keel make the canoe read as a crafted boat.
+      [-0.48, 0.48].forEach(x => {
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.18, 6.5), edgeMat);
+        rail.position.set(x, 0.82, 0);
+        canoeGroup.add(rail);
+      });
+      const keel = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.18, 5.8), darkWoodMat);
+      keel.position.set(0, 0.32, 0);
+      canoeGroup.add(keel);
+      // Two paddles placed diagonally across the seats.
+      [-0.95, 0.95].forEach((x, i) => {
+        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 4.2, 6), seatMat);
+        shaft.rotation.z = Math.PI / 2;
+        shaft.rotation.y = i === 0 ? -0.22 : 0.22;
+        shaft.position.set(x, 1.02, i === 0 ? -0.15 : 0.25);
+        canoeGroup.add(shaft);
+        const blade = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.82), edgeMat);
+        blade.position.set(x + (i === 0 ? -1.95 : 1.95), 1.02, i === 0 ? -0.6 : 0.7);
+        blade.rotation.y = i === 0 ? -0.22 : 0.22;
+        canoeGroup.add(blade);
       });
       structuresGroup.add(canoeGroup);
     })();
@@ -1283,12 +1309,39 @@
       darkHole.position.set(0, 1.2, 2.2);
       simaoGroup.add(darkHole);
 
-      const fire = new THREE.Mesh(
-        new THREE.ConeGeometry(1.2, 2.5, 5),
-        new THREE.MeshBasicMaterial({ color: 0xf97316 })
-      );
-      fire.position.set(4.5, 1.2, 3.5);
-      simaoGroup.add(fire);
+      const stoneMat = new THREE.MeshLambertMaterial({ color: 0x64748b });
+      const timberMat = new THREE.MeshLambertMaterial({ color: 0x704323 });
+      const thatchMat = new THREE.MeshLambertMaterial({ color: 0x8b5e34, flatShading: true });
+      // Stone arch and a shaded timber-and-thatch porch make the refuge legible from above.
+      const archL = new THREE.Mesh(new THREE.BoxGeometry(0.55, 2.9, 0.65), stoneMat);
+      archL.position.set(-2.25, 1.65, 2.05); simaoGroup.add(archL);
+      const archR = archL.clone(); archR.position.x = 2.25; simaoGroup.add(archR);
+      const lintel = new THREE.Mesh(new THREE.BoxGeometry(4.9, 0.55, 0.72), stoneMat);
+      lintel.position.set(0, 3.0, 2.05); simaoGroup.add(lintel);
+      [-2.8, 2.8].forEach(x => {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 3.0, 6), timberMat);
+        post.position.set(x, 1.55, 4.15); simaoGroup.add(post);
+      });
+      const shelterRoof = new THREE.Mesh(new THREE.ConeGeometry(4.0, 1.35, 4), thatchMat);
+      shelterRoof.rotation.y = Math.PI / 4;
+      shelterRoof.scale.set(1.15, 1, 0.82);
+      shelterRoof.position.set(0, 3.25, 4.15); simaoGroup.add(shelterRoof);
+      const floor = new THREE.Mesh(new THREE.BoxGeometry(6.0, 0.18, 4.3), new THREE.MeshLambertMaterial({ color: 0xb7a17a }));
+      floor.position.set(0, 0.18, 4.1); simaoGroup.add(floor);
+      // Small spring pool and a clear footpath to the refuge.
+      const spring = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.1, 0.12, 12), new THREE.MeshLambertMaterial({ color: 0x38bdf8 }));
+      spring.position.set(-4.2, 0.16, 4.7); simaoGroup.add(spring);
+      const pathMat = new THREE.MeshLambertMaterial({ color: 0xcbb58a });
+      for (let i = 0; i < 5; i++) {
+        const stone = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.08, 0.55), pathMat);
+        stone.position.set(3.5 + i * 0.65, 0.12, 5.5 + i * 0.85);
+        stone.rotation.y = -0.35;
+        simaoGroup.add(stone);
+      }
+      const fire = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.8, 6), new THREE.MeshBasicMaterial({ color: 0xf97316 }));
+      fire.position.set(4.5, 1.0, 3.5); simaoGroup.add(fire);
+      const fireBase = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.2, 0.18, 8), new THREE.MeshLambertMaterial({ color: 0x475569 }));
+      fireBase.position.set(4.5, 0.12, 3.5); simaoGroup.add(fireBase);
       structuresGroup.add(simaoGroup);
     })();
 
@@ -1323,7 +1376,123 @@
       const chimney = new THREE.Mesh(new THREE.BoxGeometry(0.85, 2.0, 0.9), new THREE.MeshLambertMaterial({ color: 0x7f1d1d }));
       chimney.position.set(-2.7, 5.35, -1.8);
       farmGroup.add(chimney);
+
+      // A small rural compound: kitchen/shed, storage barn, well, vegetable beds and fenced animal paddocks.
+      const timber = new THREE.MeshLambertMaterial({ color: 0x704323 });
+      const shedWall = new THREE.MeshLambertMaterial({ color: 0xd6c29a });
+      const tile = new THREE.MeshLambertMaterial({ color: 0x7f1d1d });
+      function addOutbuilding(x, z, w, d, h) {
+        const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), shedWall);
+        body.position.set(x, h / 2, z); farmGroup.add(body);
+        const roofA = new THREE.Mesh(new THREE.BoxGeometry(w * 0.58, 0.2, d * 1.18), tile);
+        roofA.position.set(x - w * 0.23, h + 0.55, z); roofA.rotation.z = 0.48; farmGroup.add(roofA);
+        const roofB = new THREE.Mesh(new THREE.BoxGeometry(w * 0.58, 0.2, d * 1.18), tile);
+        roofB.position.set(x + w * 0.23, h + 0.55, z); roofB.rotation.z = -0.48; farmGroup.add(roofB);
+        const door = new THREE.Mesh(new THREE.BoxGeometry(w * 0.2, h * 0.68, 0.12), timber);
+        door.position.set(x, h * 0.34, z + d / 2 + 0.07); farmGroup.add(door);
+      }
+      addOutbuilding(-8.2, -5.2, 4.2, 3.8, 2.6);
+      addOutbuilding(8.0, -4.8, 5.0, 4.5, 3.0);
+      // Stone well.
+      const well = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 0.8, 10), new THREE.MeshLambertMaterial({ color: 0x9ca3af }));
+      well.position.set(7.5, 0.4, 5.8); farmGroup.add(well);
+      const wellWater = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.72, 0.08, 10), new THREE.MeshLambertMaterial({ color: 0x38bdf8 }));
+      wellWater.position.set(7.5, 0.78, 5.8); farmGroup.add(wellWater);
+      // Low wooden rails and posts around two paddocks, kept inside the farm compound.
+      function fenceSegment(x1, z1, x2, z2, posts = 5) {
+        for (let i = 0; i <= posts; i++) {
+          const t = i / posts, x = x1 + (x2 - x1) * t, z = z1 + (z2 - z1) * t;
+          const post = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.15, 0.18), timber);
+          post.position.set(x, 0.58, z); farmGroup.add(post);
+        }
+        const dx = x2 - x1, dz = z2 - z1, length = Math.hypot(dx, dz), yaw = Math.atan2(dx, dz);
+        [0.34, 0.78].forEach(y => {
+          const rail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, length), timber);
+          rail.position.set((x1+x2)/2, y, (z1+z2)/2); rail.rotation.y = yaw; farmGroup.add(rail);
+        });
+      }
+      fenceSegment(-14, -10, -3, -10, 5);
+      fenceSegment(-14, -10, -14, -1, 4);
+      fenceSegment(-14, -1, -3, -1, 5);
+      fenceSegment(3, -10, 14, -10, 5);
+      fenceSegment(14, -10, 14, -1, 4);
+      fenceSegment(3, -1, 14, -1, 5);
+      // Tiny, low-poly livestock silhouettes.
+      const animalBody = new THREE.MeshLambertMaterial({ color: 0xf5f5f4 });
+      const animalPatch = new THREE.MeshLambertMaterial({ color: 0x292524 });
+      function addAnimal(x, z, scale, isCow) {
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.5*scale, 0.8*scale, 0.65*scale), isCow ? animalBody : new THREE.MeshLambertMaterial({ color: 0xf0d7b5 }));
+        body.position.set(x, 0.72*scale, z); farmGroup.add(body);
+        if (isCow) {
+          const patch = new THREE.Mesh(new THREE.BoxGeometry(0.55*scale, 0.12*scale, 0.68*scale), animalPatch);
+          patch.position.set(x - 0.22*scale, 1.08*scale, z); farmGroup.add(patch);
+        }
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.42*scale, 0.42*scale, 0.42*scale), body.material);
+        head.position.set(x + 0.82*scale, 0.85*scale, z + 0.04*scale); farmGroup.add(head);
+        for (const lx of [-0.45, 0.45]) for (const lz of [-0.2, 0.2]) {
+          const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12*scale, 0.5*scale, 0.12*scale), timber);
+          leg.position.set(x + lx*scale, 0.28*scale, z + lz*scale); farmGroup.add(leg);
+        }
+      }
+      addAnimal(-10.5, -5.0, 0.75, true);
+      addAnimal(-7.5, -4.0, 0.68, false);
+      addAnimal(10.5, -5.0, 0.75, true);
+      // Short vegetable rows beside the kitchen garden.
+      const gardenMat = new THREE.MeshLambertMaterial({ color: 0x65a30d });
+      for (let row = 0; row < 3; row++) {
+        const bed = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.12, 0.6), new THREE.MeshLambertMaterial({ color: 0x8b7355 }));
+        bed.position.set(-8.5, 0.16, 5.8 + row * 1.0); farmGroup.add(bed);
+        for (let col = 0; col < 5; col++) {
+          const crop = new THREE.Mesh(new THREE.SphereGeometry(0.22, 5, 4), gardenMat);
+          crop.position.set(-10 + col * 0.72, 0.38, 5.8 + row * 1.0); farmGroup.add(crop);
+        }
+      }
       structuresGroup.add(farmGroup);
+    })();
+
+    // Small settlements on the northern edge of the map, beyond the main island.
+    // The raised grassy islets intentionally sit above the blue water plane.
+    const northHamletsGroup = new THREE.Group();
+    reliefGroup.add(northHamletsGroup);
+    (function() {
+      const landMat = new THREE.MeshLambertMaterial({ color: 0x7da66b, flatShading: true });
+      const sandMat = new THREE.MeshLambertMaterial({ color: 0xd8c49a });
+      const wallMat = new THREE.MeshLambertMaterial({ color: 0xf3e7ce });
+      const woodMat = new THREE.MeshLambertMaterial({ color: 0x704323 });
+      function hamletHouse(parent, x, z, scale, color) {
+        const g = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.BoxGeometry(4.2*scale, 2.6*scale, 3.6*scale), wallMat);
+        body.position.y = 1.3*scale; g.add(body);
+        const roofL = new THREE.Mesh(new THREE.BoxGeometry(2.8*scale, 0.18*scale, 4.2*scale), new THREE.MeshLambertMaterial({ color, flatShading: true }));
+        roofL.position.set(-1.05*scale, 3.0*scale, 0); roofL.rotation.z = 0.5; g.add(roofL);
+        const roofR = new THREE.Mesh(new THREE.BoxGeometry(2.8*scale, 0.18*scale, 4.2*scale), new THREE.MeshLambertMaterial({ color, flatShading: true }));
+        roofR.position.set(1.05*scale, 3.0*scale, 0); roofR.rotation.z = -0.5; g.add(roofR);
+        const door = new THREE.Mesh(new THREE.BoxGeometry(0.55*scale, 1.35*scale, 0.12*scale), woodMat);
+        door.position.set(0.65*scale, 0.68*scale, 1.86*scale); g.add(door);
+        const winMat = new THREE.MeshLambertMaterial({ color: 0x7dd3fc });
+        [-1.1, 1.1].forEach(wx => {
+          const win = new THREE.Mesh(new THREE.BoxGeometry(0.62*scale, 0.6*scale, 0.1*scale), winMat);
+          win.position.set(wx*scale, 1.55*scale, 1.87*scale); g.add(win);
+        });
+        g.position.set(x, 0.3, z); parent.add(g);
+      }
+      function islet(x, z, rx, rz, houses) {
+        const island = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8), landMat);
+        island.scale.set(rx, 1.4, rz); island.position.set(x, 0.15, z); northHamletsGroup.add(island);
+        const beach = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8), sandMat);
+        beach.scale.set(rx*0.82, 0.42, rz*0.82); beach.position.set(x, 0.55, z); northHamletsGroup.add(beach);
+        const top = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8), landMat);
+        top.scale.set(rx*0.74, 0.72, rz*0.74); top.position.set(x, 0.76, z); northHamletsGroup.add(top);
+        houses.forEach(h => hamletHouse(northHamletsGroup, x+h[0], z+h[1], h[2], h[3]));
+        const fenceZ = z + rz*0.45;
+        for (let i=0; i<5; i++) {
+          const post = new THREE.Mesh(new THREE.BoxGeometry(0.15,0.8,0.15),woodMat);
+          post.position.set(x-rx*0.45+i*rx*0.22, 0.9, fenceZ); northHamletsGroup.add(post);
+        }
+      }
+      islet(-92, -109, 15, 7.5, [[-4, -1, 0.95, 0x9b4338],[4, 1, 0.72, 0xb4533c]]);
+      islet(-38, -113, 12, 6.5, [[0, 0, 0.88, 0x7c3f32]]);
+      islet(20, -108, 14, 7, [[-3, 0, 0.82, 0x9b4338],[4, -1, 0.68, 0xb4533c]]);
     })();
 
     const customStamps3DGroup = new THREE.Group();
