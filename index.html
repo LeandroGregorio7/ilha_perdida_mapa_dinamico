@@ -756,40 +756,75 @@
     // NO jagged grey mountains! Only smooth green rounded hills (colinas arredondadas) upstream,
     // wide river floodplain (várzea do rio), winding river channels splitting around the Island,
     // and the open Sea downstream (mar na jusante) — inspired directly by image_442059.jpg!
+    // Two small tributaries feed the Paraíba do Sul main channel from opposite sides.
+    // These center lines also guide the terrain cut-outs, so the river network stays continuous.
+    const TRIBUTARY_PATHS = [
+      [[-141, -43], [-113, -35], [-84, -25], [-55, -15], [-28, -9], [10, -5]],
+      [[146, 36], [120, 35], [95, 33], [71, 31], [48, 30], [25, 30]]
+    ];
+
+    function distanceToPolyline(wx, wz, path) {
+      let minDistSq = Infinity;
+      for (let i = 0; i < path.length - 1; i++) {
+        const ax = path[i][0], az = path[i][1];
+        const bx = path[i + 1][0], bz = path[i + 1][1];
+        const dx = bx - ax, dz = bz - az;
+        const denom = dx * dx + dz * dz || 1;
+        const t = Math.max(0, Math.min(1, ((wx - ax) * dx + (wz - az) * dz) / denom));
+        const px = ax + t * dx, pz = az + t * dz;
+        const dxx = wx - px, dzz = wz - pz;
+        minDistSq = Math.min(minDistSq, dxx * dxx + dzz * dzz);
+      }
+      return Math.sqrt(minDistSq);
+    }
+
     function getTerrainGeography(wx, wz) {
-      // Island silhouette with an irregular coast; the separate ocean surface hides
-      // the submerged rectangular heightfield around the island.
+      // Broaden the land mass while retaining a hand-shaped, irregular coastline.
       const coastNoise = 0.026 * Math.sin(wx * 0.095) +
                          0.021 * Math.cos(wz * 0.105) +
                          0.014 * Math.sin((wx + wz) * 0.16);
-      const islandDist = Math.hypot((wx + 2) / 139, (wz + 1) / 92) + coastNoise;
-      // A single meandering river rises in the northern hills and empties at the south coast.
+      const islandDist = Math.hypot((wx + 2) / 151, (wz + 1) / 101) + coastNoise;
+
+      // Main Paraíba do Sul channel: narrowed by about one third versus the earlier version.
       const riverX = -5 + (wz + 82) * 0.20 + Math.sin((wz + 10) * 0.045) * 8;
-      const riverHalfW = 7.5 + Math.max(0, (wz + 35) * 0.035) +
-                         Math.max(0, (wz - 55) * 0.035);
+      const riverHalfW = 4.1 + Math.max(0, (wz + 35) * 0.019) +
+                         Math.max(0, (wz - 55) * 0.009);
       const distanceToRiver = Math.abs(wx - riverX);
-      const inRiver = distanceToRiver < riverHalfW;
-      if (islandDist >= 1.0 || inRiver) return { elev: -2.0, zone: inRiver && islandDist < 1.0 ? 'river' : 'water' };
+      const inMainRiver = distanceToRiver < riverHalfW;
+
+      const westTributaryDist = distanceToPolyline(wx, wz, TRIBUTARY_PATHS[0]);
+      const eastTributaryDist = distanceToPolyline(wx, wz, TRIBUTARY_PATHS[1]);
+      const tributaryHalfW = 2.45;
+      const inTributary = westTributaryDist < tributaryHalfW || eastTributaryDist < tributaryHalfW;
+
+      if (islandDist >= 1.0 || inMainRiver || inTributary) {
+        const inWatercourse = islandDist < 1.0 && (inMainRiver || inTributary);
+        return { elev: -2.0, zone: inWatercourse ? 'river' : 'water', coastDist: islandDist };
+      }
+
       const edgeFactor = Math.max(0, 1.0 - islandDist);
       const riverClearance = Math.max(0, distanceToRiver - riverHalfW);
       const riverBankTaper = Math.min(1.0, Math.max(0.12, riverClearance / 15));
       let h = 0.55 + Math.min(1.0, edgeFactor * 2.7) * 4.1 * riverBankTaper;
+
       const roundedHills = [
         { cx: -38, cz: -46, rx: 28, rz: 24, peak: 18.5 },
         { cx: -8, cz: -53, rx: 24, rz: 21, peak: 13.0 },
         { cx: -64, cz: -10, rx: 24, rz: 22, peak: 9.5 },
         { cx: 35, cz: -35, rx: 29, rz: 23, peak: 12.5 },
         { cx: 27, cz: -5, rx: 25, rz: 22, peak: 7.0 },
-        { cx: -101, cz: -27, rx: 26, rz: 22, peak: 6.5 }
+        { cx: -101, cz: -27, rx: 26, rz: 22, peak: 6.5 },
+        { cx: 87, cz: -7, rx: 24, rz: 24, peak: 5.8 }
       ];
-      for(const hill of roundedHills){
-        const d=Math.hypot((wx-hill.cx)/hill.rx,(wz-hill.cz)/hill.rz);
-        if(d<1.0)h+=Math.pow(Math.cos(d*Math.PI*0.5),1.7)*hill.peak*riverBankTaper;
+      for (const hill of roundedHills) {
+        const d = Math.hypot((wx - hill.cx) / hill.rx, (wz - hill.cz) / hill.rz);
+        if (d < 1.0) h += Math.pow(Math.cos(d * Math.PI * 0.5), 1.7) * hill.peak * riverBankTaper;
       }
-      if(wz>16)h*=Math.max(0.43,1.0-(wz-16)/115);
-      const floodplainDist=Math.hypot((wx-52)/42,(wz-36)/31);
-      if(floodplainDist<1.0)h=Math.min(h,2.25+floodplainDist*0.65);
-      return {elev:Math.max(0.55,h),zone:'island'};
+
+      if (wz > 16) h *= Math.max(0.43, 1.0 - (wz - 16) / 115);
+      const floodplainDist = Math.hypot((wx - 52) / 42, (wz - 36) / 31);
+      if (floodplainDist < 1.0) h = Math.min(h, 2.25 + floodplainDist * 0.65);
+      return { elev: Math.max(0.55, h), zone: 'island', coastDist: islandDist };
     }
 
     function worldToCoordLabel(wx, wz) {
@@ -840,8 +875,8 @@
     dioramaGroup.add(reliefGroup);
 
     // 4A. TWO PRE-BUILT TERRAIN MESHES (Normal vs Extreme Flood Highlight -> Zero CPU-GPU upload lag!)
-    const SEG_X = 160;
-    const SEG_Z = 120;
+    const SEG_X = 172;
+    const SEG_Z = 128;
     const baseGeo = new THREE.PlaneGeometry(WORLD_W, WORLD_D, SEG_X, SEG_Z);
     baseGeo.rotateX(-Math.PI / 2);
 
@@ -854,14 +889,16 @@
     for (let i = 0; i < vCount; i++) {
       const vx = posAttr.getX(i);
       const vz = posAttr.getZ(i);
-      const { elev } = getTerrainGeography(vx, vz);
+      const { elev, coastDist = 0 } = getTerrainGeography(vx, vz);
       posAttr.setY(i, elev);
 
       // Normal 1944 Color Palette (like reference image_442059.jpg: golden beaches, light-green várzea, lush green rounded hills)
       if (elev < 0.2) {
         cTmp.setHex(0x0c4a6e); // Sea/River bed
+      } else if (coastDist > 0.925 && elev < 3.6) {
+        cTmp.setHex(0xfde68a); // Wider pale-sand shore band on the enlarged island.
       } else if (elev < 1.9) {
-        cTmp.setHex(0xfde68a); // Golden sandy beach (Praia)
+        cTmp.setHex(0xf6d68a); // Golden sandy beach (Praia)
       } else if (elev < 4.5) {
         cTmp.setHex(0x86efac); // Low flat River Floodplain (Várzea do Rio)
       } else if (elev < 12.0) {
@@ -934,10 +971,10 @@
         const t = i / (points.length - 1);
         // Small head cuts widen into a fan of exposed soil downhill.
         const width = baseWidth * (0.32 + 0.9 * t);
-        const elevation = getTerrainGeography(p.x, p.z).elev;
-        const y = Math.max(0.8, elevation + yOffset);
-        positions.push(p.x + nx * width, y, p.z + nz * width);
-        positions.push(p.x - nx * width, y, p.z - nz * width);
+        const yLeft = Math.max(0.8, getTerrainGeography(p.x + nx * width, p.z + nz * width).elev + yOffset);
+        const yRight = Math.max(0.8, getTerrainGeography(p.x - nx * width, p.z - nz * width).elev + yOffset);
+        positions.push(p.x + nx * width, yLeft, p.z + nz * width);
+        positions.push(p.x - nx * width, yRight, p.z - nz * width);
         if (i < points.length - 1) {
           const a = i * 2;
           indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
@@ -959,7 +996,10 @@
       [[-32, -49], [-27, -44], [-23, -39], [-19, -33], [-15, -28]],
       [[-10, -58], [-14, -53], [-17, -48], [-19, -43], [-21, -39]],
       [[35, -38], [39, -32], [43, -27], [48, -22], [51, -17]],
-      [[-64, -14], [-68, -9], [-72, -4], [-76, 1], [-79, 5]]
+      [[-64, -14], [-68, -9], [-72, -4], [-76, 1], [-79, 5]],
+      [[-51, -37], [-46, -34], [-42, -31], [-38, -27]],
+      [[-22, -44], [-19, -40], [-16, -37], [-13, -33]],
+      [[38, -29], [42, -25], [45, -22], [48, -19]]
     ];
     erosionPaths.forEach(path => {
       addErosionRibbon(path, 1.55, erosionSedimentMaterial, 0.11);
@@ -979,7 +1019,100 @@
     waterMesh.position.y = 0.0;
     reliefGroup.add(waterMesh);
 
-    // 4C. INSTANCED TREES (280 Trees rendered in 2 single GPU draw calls!)
+    // 4B.1. SHALLOW COASTAL SHELF: a thin turquoise depth band outside the sand edge.
+    // It sits just above the normal sea surface and gets hidden naturally as floodwater rises.
+    const shelfGeometry = new THREE.BufferGeometry();
+    const shelfPositions = [];
+    const shelfIndices = [];
+    const SHELF_STEPS = 112;
+    for (let i = 0; i < SHELF_STEPS; i++) {
+      const a = (i / SHELF_STEPS) * Math.PI * 2;
+      const irregular = 1 + 0.012 * Math.sin(3 * a) + 0.008 * Math.cos(7 * a) + 0.006 * Math.sin(11 * a);
+      const nextA = ((i + 1) / SHELF_STEPS) * Math.PI * 2;
+      shelfPositions.push(Math.cos(a) * 157 * irregular, 0.035, Math.sin(a) * 105 * irregular);
+      shelfPositions.push(Math.cos(a) * 170 * irregular, 0.035, Math.sin(a) * 117 * irregular);
+      const j = (i + 1) % SHELF_STEPS;
+      shelfIndices.push(i * 2, i * 2 + 1, j * 2, i * 2 + 1, j * 2 + 1, j * 2);
+    }
+    shelfGeometry.setAttribute('position', new THREE.Float32BufferAttribute(shelfPositions, 3));
+    shelfGeometry.setIndex(shelfIndices);
+    shelfGeometry.computeVertexNormals();
+    const shelfMesh = new THREE.Mesh(shelfGeometry, new THREE.MeshLambertMaterial({
+      color: 0x67e8f9, transparent: true, opacity: 0.48, depthWrite: false, side: THREE.DoubleSide
+    }));
+    shelfMesh.renderOrder = 2;
+    reliefGroup.add(shelfMesh);
+
+    // 4C. ATMOSPHERE: one simple sun, a few low-poly clouds and a small flock of birds.
+    // Shared geometry/materials keep this lightweight; visibility changes with each swipe half.
+    const atmosphereGroup = new THREE.Group();
+    scene.add(atmosphereGroup);
+
+    const sunGroup = new THREE.Group();
+    const sunCore = new THREE.Mesh(
+      new THREE.SphereGeometry(5.4, 12, 8),
+      new THREE.MeshBasicMaterial({ color: 0xffd35a })
+    );
+    sunGroup.add(sunCore);
+    const sunHalo = new THREE.Mesh(
+      new THREE.SphereGeometry(7.1, 10, 7),
+      new THREE.MeshBasicMaterial({ color: 0xffe9a6, transparent: true, opacity: 0.18, depthWrite: false })
+    );
+    sunGroup.add(sunHalo);
+    const rayPositions = [];
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      rayPositions.push(Math.cos(a) * 6.5, Math.sin(a) * 6.5, 0);
+      rayPositions.push(Math.cos(a) * 8.2, Math.sin(a) * 8.2, 0);
+    }
+    const rayGeo = new THREE.BufferGeometry();
+    rayGeo.setAttribute('position', new THREE.Float32BufferAttribute(rayPositions, 3));
+    sunGroup.add(new THREE.LineSegments(rayGeo, new THREE.LineBasicMaterial({ color: 0xffd35a, transparent: true, opacity: 0.85 })));
+    sunGroup.position.set(-123, 58, -72);
+    atmosphereGroup.add(sunGroup);
+
+    const cloudGroup = new THREE.Group();
+    const cloudGeometry = new THREE.SphereGeometry(6.4, 8, 6);
+    const cloudMaterial = new THREE.MeshLambertMaterial({ color: 0x64748b, transparent: true, opacity: 0.55, depthWrite: false });
+    const cloudSeeds = [
+      { x: -115, y: 43, z: -74, scale: 1.00 },
+      { x: -36, y: 49, z: -88, scale: 1.12 },
+      { x: 48, y: 42, z: -76, scale: 0.92 }
+    ];
+    cloudSeeds.forEach((seed, idx) => {
+      const cloud = new THREE.Group();
+      [[-5, 0, 0, 0.82], [0, 2.0, 0, 1.0], [5.0, 0.3, 0, 0.78], [1.5, -1.0, 3.1, 0.68]].forEach(([x, y, z, sc]) => {
+        const puff = new THREE.Mesh(cloudGeometry, cloudMaterial);
+        puff.position.set(x * seed.scale, y * seed.scale, z * seed.scale);
+        puff.scale.set(sc * seed.scale, sc * 0.68 * seed.scale, sc * seed.scale);
+        cloud.add(puff);
+      });
+      cloud.position.set(seed.x, seed.y, seed.z);
+      cloud.userData.baseX = seed.x;
+      cloud.userData.phase = idx * 1.7;
+      cloudGroup.add(cloud);
+    });
+    atmosphereGroup.add(cloudGroup);
+
+    const birdsGroup = new THREE.Group();
+    const birdLineMat = new THREE.LineBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.82 });
+    const birdLineGeo = new THREE.BufferGeometry();
+    birdLineGeo.setAttribute('position', new THREE.Float32BufferAttribute([
+      -2.1, 0, 0, 0, 1.0, 0, 0, 1.0, 0, 2.1, 0, 0
+    ], 3));
+    for (let i = 0; i < 7; i++) {
+      const bird = new THREE.LineSegments(birdLineGeo, birdLineMat);
+      bird.position.set(-76 + i * 13, 30 + (i % 3) * 2.2, -66 + (i % 4) * 5.4);
+      bird.userData.baseX = bird.position.x;
+      bird.userData.baseY = bird.position.y;
+      bird.userData.baseZ = bird.position.z;
+      bird.userData.phase = i * 0.83;
+      bird.scale.setScalar(0.7 + (i % 3) * 0.13);
+      birdsGroup.add(bird);
+    }
+    atmosphereGroup.add(birdsGroup);
+
+    // 4C. INSTANCED TREES (280 Trees rendered in 3 instanced batches!)
     const forestGroup = new THREE.Group();
     reliefGroup.add(forestGroup);
 
@@ -987,11 +1120,12 @@
       const MAX_TREES = 280;
       const trunkGeo = new THREE.CylinderGeometry(0.28, 0.4, 1.8, 5);
       const trunkMat = new THREE.MeshLambertMaterial({ color: 0x78350f });
-      const crownGeo = new THREE.SphereGeometry(1.85, 7, 6);
+      const crownGeo = new THREE.IcosahedronGeometry(1.65, 1);
       const crownMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
 
       const trunkInst = new THREE.InstancedMesh(trunkGeo, trunkMat, MAX_TREES);
       const crownInst = new THREE.InstancedMesh(crownGeo, crownMat, MAX_TREES);
+      const crown2Inst = new THREE.InstancedMesh(crownGeo, crownMat, MAX_TREES);
 
       const dummy = new THREE.Object3D();
       const col = new THREE.Color();
@@ -1003,14 +1137,26 @@
         return seed / 4294967296;
       }
 
+      const groveCenters = [
+        { x: -40, z: -43, r: 36 }, { x: -77, z: -8, r: 27 },
+        { x: 27, z: -31, r: 34 }, { x: -12, z: -63, r: 22 },
+        { x: 12, z: 4, r: 28 }, { x: 77, z: -8, r: 25 }
+      ];
       let count = 0;
-      for (let i = 0; i < 650 && count < MAX_TREES; i++) {
+      for (let i = 0; i < 1100 && count < MAX_TREES; i++) {
         const wx = -HALF_W * 0.88 + rand() * WORLD_W * 0.88;
         const wz = -HALF_D * 0.88 + rand() * WORLD_D * 0.88;
-        const { elev } = getTerrainGeography(wx, wz);
-        if (elev < 2.1 || elev > 19.5) continue;
+        const { elev, zone } = getTerrainGeography(wx, wz);
+        if (elev < 2.1 || elev > 19.5 || zone !== 'island') continue;
 
-        const nearPoi = state.pois.some(p => p.id !== 'forest' && Math.hypot(p.wx - wx, p.wz - wz) < 9);
+        // Clustered groves with open clearings around landmarks and the river corridors.
+        let groveAffinity = 0;
+        for (const grove of groveCenters) {
+          const d = Math.hypot((wx - grove.x), (wz - grove.z));
+          groveAffinity = Math.max(groveAffinity, Math.exp(-(d * d) / (2 * grove.r * grove.r)));
+        }
+        if (rand() > 0.20 + 0.76 * groveAffinity) continue;
+        const nearPoi = state.pois.some(p => p.id !== 'forest' && Math.hypot(p.wx - wx, p.wz - wz) < 11);
         if (nearPoi) continue;
 
         const s = 0.75 + rand() * 0.65;
@@ -1024,18 +1170,30 @@
         dummy.updateMatrix();
         crownInst.setMatrixAt(count, dummy.matrix);
 
+        // Offset secondary crown fills the canopy silhouette without extra draw calls per tree.
+        dummy.position.set(wx + (rand() - 0.5) * 1.4 * s, elev + 2.1 * s, wz + (rand() - 0.5) * 1.4 * s);
+        dummy.scale.set(s * 0.78, s * (0.68 + rand() * 0.20), s * 0.78);
+        dummy.updateMatrix();
+        crown2Inst.setMatrixAt(count, dummy.matrix);
+
         col.setHex(greens[count % greens.length]);
         crownInst.setColorAt(count, col);
+        col.setHex(greens[(count + 2) % greens.length]);
+        crown2Inst.setColorAt(count, col);
         count++;
       }
       trunkInst.count = count;
       crownInst.count = count;
+      crown2Inst.count = count;
       trunkInst.instanceMatrix.needsUpdate = true;
       crownInst.instanceMatrix.needsUpdate = true;
+      crown2Inst.instanceMatrix.needsUpdate = true;
       if (crownInst.instanceColor) crownInst.instanceColor.needsUpdate = true;
+      if (crown2Inst.instanceColor) crown2Inst.instanceColor.needsUpdate = true;
 
       forestGroup.add(trunkInst);
       forestGroup.add(crownInst);
+      forestGroup.add(crown2Inst);
     })();
 
     // 4D. TRAILS, WOODEN BRIDGES, JETTIES (TRAPICHES) & LANDMARK MODELS (Like image_442059.jpg!)
@@ -1078,12 +1236,23 @@
     // 1) Canoe
     const canoeGroup = new THREE.Group();
     (function() {
-      const hullGeo = new THREE.CylinderGeometry(1.1, 0.8, 7.5, 7);
+      const hullGeo = new THREE.LatheGeometry([
+        new THREE.Vector2(0.08, -3.8), new THREE.Vector2(0.48, -3.25),
+        new THREE.Vector2(0.78, -2.3), new THREE.Vector2(1.02, -0.8),
+        new THREE.Vector2(0.98, 0.8), new THREE.Vector2(0.72, 2.3),
+        new THREE.Vector2(0.42, 3.25), new THREE.Vector2(0.08, 3.8)
+      ], 9);
       hullGeo.rotateZ(Math.PI / 2);
-      hullGeo.scale(1, 0.45, 0.55);
-      const hull = new THREE.Mesh(hullGeo, new THREE.MeshLambertMaterial({ color: 0xb45309 }));
+      const hull = new THREE.Mesh(hullGeo, new THREE.MeshLambertMaterial({ color: 0x9a4c22, flatShading: true }));
+      hull.scale.y = 0.62;
       hull.position.y = 0.5;
       canoeGroup.add(hull);
+      const seatMat = new THREE.MeshLambertMaterial({ color: 0xd6a56b });
+      [-1.15, 1.15].forEach(x => {
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.13, 1.3), seatMat);
+        seat.position.set(x, 0.82, 0);
+        canoeGroup.add(seat);
+      });
       structuresGroup.add(canoeGroup);
     })();
 
@@ -1120,10 +1289,31 @@
       const wall = new THREE.Mesh(new THREE.BoxGeometry(8, 3.8, 6), new THREE.MeshLambertMaterial({ color: 0xf8fafc }));
       wall.position.y = 1.9;
       farmGroup.add(wall);
-      const roof = new THREE.Mesh(new THREE.ConeGeometry(6.5, 3.0, 4), new THREE.MeshLambertMaterial({ color: 0xb91c1c }));
-      roof.position.y = 5.3;
-      roof.rotation.y = Math.PI / 4;
-      farmGroup.add(roof);
+      const roofMat = new THREE.MeshLambertMaterial({ color: 0x9f2d25 });
+      const leftRoof = new THREE.Mesh(new THREE.BoxGeometry(5.9, 0.32, 7.3), roofMat);
+      leftRoof.position.set(-2.35, 4.95, 0);
+      leftRoof.rotation.z = 0.43;
+      farmGroup.add(leftRoof);
+      const rightRoof = new THREE.Mesh(new THREE.BoxGeometry(5.9, 0.32, 7.3), roofMat);
+      rightRoof.position.set(2.35, 4.95, 0);
+      rightRoof.rotation.z = -0.43;
+      farmGroup.add(rightRoof);
+      const trimMat = new THREE.MeshLambertMaterial({ color: 0xf1e4c6 });
+      const door = new THREE.Mesh(new THREE.BoxGeometry(1.15, 2.05, 0.18), new THREE.MeshLambertMaterial({ color: 0x704323 }));
+      door.position.set(0.8, 1.03, 3.08);
+      farmGroup.add(door);
+      const windowMat = new THREE.MeshLambertMaterial({ color: 0x7dd3fc });
+      [-2.5, 2.5].forEach(x => {
+        const win = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.0, 0.16), windowMat);
+        win.position.set(x, 2.25, 3.08);
+        farmGroup.add(win);
+        const sill = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.12, 0.22), trimMat);
+        sill.position.set(x, 1.68, 3.12);
+        farmGroup.add(sill);
+      });
+      const chimney = new THREE.Mesh(new THREE.BoxGeometry(0.85, 2.0, 0.9), new THREE.MeshLambertMaterial({ color: 0x7f1d1d }));
+      chimney.position.set(-2.7, 5.35, -1.8);
+      farmGroup.add(chimney);
       structuresGroup.add(farmGroup);
     })();
 
@@ -1133,6 +1323,12 @@
     function applyScenarioTo3D(isExtremeSide, timeSec) {
       const rainRatio = isExtremeSide ? (state.rainHours / 24) : 0.0;
       const floodLevel = rainRatio * 4.5; // Up to +4.5m flood
+
+      sunGroup.visible = !isExtremeSide;
+      birdsGroup.visible = !isExtremeSide;
+      cloudGroup.visible = isExtremeSide && state.layers.weather && state.rainHours > 0.25;
+      cloudMaterial.opacity = 0.24 + rainRatio * 0.42;
+      sunGroup.quaternion.copy(camera.quaternion);
 
       // Toggle pre-built vertex-colored terrain mesh (Zero lag!)
       const showFloodHighlight = isExtremeSide && state.layers.floodRisk && rainRatio > 0.08;
@@ -1551,6 +1747,17 @@
       camera.updateProjectionMatrix();
 
       reliefGroup.scale.y = state.verticalExag;
+      // Gentle, bounded animation: no particles or per-frame geometry rebuilds.
+      cloudGroup.children.forEach(cloud => {
+        cloud.position.x = cloud.userData.baseX + Math.sin(timeSec * 0.055 + cloud.userData.phase) * 4.5;
+      });
+      birdsGroup.children.forEach(bird => {
+        const p = bird.userData.phase;
+        bird.position.x = bird.userData.baseX + Math.sin(timeSec * 0.23 + p) * 13;
+        bird.position.y = bird.userData.baseY + Math.sin(timeSec * 1.15 + p) * 1.5;
+        bird.position.z = bird.userData.baseZ + Math.cos(timeSec * 0.17 + p) * 3;
+      });
+      sunGroup.rotation.z = Math.sin(timeSec * 0.05) * 0.035;
       forestGroup.visible = state.layers.forest;
       trailsAndBridgesGroup.visible = state.layers.relief;
 
