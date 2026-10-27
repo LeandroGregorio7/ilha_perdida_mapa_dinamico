@@ -19,7 +19,7 @@
       margin: 0; padding: 0; width: 100%; height: 100%;
       overflow: hidden;
       font-family: 'Inter', sans-serif;
-      background: radial-gradient(circle at 50% 45%, #1e6091 0%, #113f67 60%, #0b2545 100%);
+      background: radial-gradient(circle at 50% 45%, #e5e9df 0%, #ccd8ce 60%, #aabbb0 100%);
       color: #0f172a;
     }
     .font-display { font-family: 'Fredoka', 'Inter', sans-serif; }
@@ -158,7 +158,7 @@
 
     <!-- Right: Sound + Instructions Modal -->
     <div class="flex items-center gap-1.5 pointer-events-auto">
-      <button id="btnToggleSound" type="button" class="clean-pill hover:bg-slate-100 text-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold flex items-center gap-1.5 transition-all" title="Som ambiente: ondas e pássaros no cenário normal; chuva na cheia">
+      <button id="btnToggleSound" type="button" class="clean-pill hover:bg-slate-100 text-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold flex items-center gap-1.5 transition-all" title="Som ambiente: ondas e gaivotas no tempo bom; chuva no cenário extremo">
         <span id="soundIcon">🔊</span> <span id="soundLabel" class="hidden lg:inline">Som Ativo</span>
       </button>
       <button id="btnOpenWelcome" type="button" class="clean-pill bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-3 py-1.5 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm">
@@ -256,6 +256,10 @@
           <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-100/90 hover:bg-slate-200/70 cursor-pointer font-semibold text-slate-700">
             <input id="layerWeather" type="checkbox" checked class="accent-indigo-600 rounded" />
             <span>🌧️ Chuva/Barcos</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-100/90 hover:bg-slate-200/70 cursor-pointer font-semibold text-slate-700">
+            <input id="layerErosion" type="checkbox" checked class="accent-amber-700 rounded" />
+            <span>🟤 Erosão nos Morros</span>
           </label>
         </div>
       </div>
@@ -529,7 +533,7 @@
     const SoundEngine = {
       ctx: null, enabled: true, ambientStarted: false,
       rainGain: null, riverGain: null, seaGain: null,
-      birdTimer: null, surfTimer: null,
+      gullTimer: null, surfTimer: null,
       init() {
         if (!this.ctx) {
           const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -563,11 +567,11 @@
         } catch(e) { console.warn('Não foi possível iniciar o áudio ambiente:',e); }
       },
       syncAmbientTimers() {
-        if(this.birdTimer) window.clearInterval(this.birdTimer);
+        if(this.gullTimer) window.clearInterval(this.gullTimer);
         if(this.surfTimer) window.clearInterval(this.surfTimer);
-        this.birdTimer=null; this.surfTimer=null;
+        this.gullTimer=null; this.surfTimer=null;
         if(!this.enabled || !this.ctx || state.viewMode!=='normal') return;
-        this.birdTimer=window.setInterval(()=>{if(this.enabled&&state.viewMode==='normal')this.playBirdChirp();},5200);
+        this.gullTimer=window.setInterval(()=>{if(this.enabled&&state.viewMode==='normal')this.playSeagullCall();},5200);
         this.surfTimer=window.setInterval(()=>{
           if(!this.enabled||state.viewMode!=='normal'||!this.seaGain)return;
           const now=this.ctx.currentTime; this.seaGain.gain.cancelScheduledValues(now);
@@ -604,16 +608,42 @@
         gain.gain.setValueAtTime(0.08,now);gain.gain.exponentialRampToValueAtTime(0.001,now+0.8);
         osc.connect(gain);gain.connect(this.ctx.destination);osc.start(now);osc.stop(now+0.8);
       },
-      playBirdChirp() {
-        if(!this.enabled||state.viewMode!=='normal')return;this.init();if(!this.ctx)return;
-        const now=this.ctx.currentTime,notes=[1650+Math.random()*250,2150+Math.random()*300,1780+Math.random()*240],offsets=[0,0.12,0.25];
-        notes.forEach((freq,i)=>{
-          const osc=this.ctx.createOscillator(),gain=this.ctx.createGain(),startAt=now+offsets[i],duration=0.10+Math.random()*0.05;
-          osc.type='sine';osc.frequency.setValueAtTime(freq,startAt);
-          osc.frequency.exponentialRampToValueAtTime(freq*(0.78+Math.random()*0.12),startAt+duration);
-          gain.gain.setValueAtTime(0.0001,startAt);gain.gain.linearRampToValueAtTime(0.025,startAt+0.018);
-          gain.gain.exponentialRampToValueAtTime(0.0001,startAt+duration);
-          osc.connect(gain);gain.connect(this.ctx.destination);osc.start(startAt);osc.stop(startAt+duration+0.01);
+      playSeagullCall() {
+        if (!this.enabled || state.viewMode !== 'normal') return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        // Synthetic gull cries: slightly rough, descending two-part calls with a wavering pitch.
+        const phrases = [
+          { start: 0,    freq: 980, end: 690, dur: 0.31 },
+          { start: 0.22, freq: 760, end: 560, dur: 0.37 },
+          { start: 0.82, freq: 1040, end: 720, dur: 0.28 },
+          { start: 1.04, freq: 790, end: 570, dur: 0.40 }
+        ];
+        phrases.forEach((p, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          const wobble = this.ctx.createOscillator();
+          const wobbleGain = this.ctx.createGain();
+          const t0 = now + p.start + Math.random() * 0.035;
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(p.freq * (0.92 + Math.random() * 0.16), t0);
+          osc.frequency.exponentialRampToValueAtTime(p.end, t0 + p.dur);
+          wobble.type = 'sine';
+          wobble.frequency.value = 7 + Math.random() * 2.5;
+          wobbleGain.gain.value = 16 + Math.random() * 12;
+          wobble.connect(wobbleGain);
+          wobbleGain.connect(osc.frequency);
+          gain.gain.setValueAtTime(0.0001, t0);
+          gain.gain.linearRampToValueAtTime(i % 2 === 0 ? 0.035 : 0.027, t0 + 0.035);
+          gain.gain.setTargetAtTime(0.012, t0 + p.dur * 0.48, 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t0 + p.dur);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          wobble.start(t0);
+          osc.start(t0);
+          osc.stop(t0 + p.dur + 0.02);
+          wobble.stop(t0 + p.dur + 0.02);
         });
       }
     };
@@ -649,7 +679,8 @@
         floodRisk: true,
         relief: true,
         grid: true,
-        weather: true
+        weather: true,
+        erosion: true
       },
       selectedPoiId: 'canoe',
       draggingSwipe: false,
@@ -782,7 +813,7 @@
     container.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x087da5); // Seamless ocean-blue horizon/fallback.
+    scene.background = new THREE.Color(0xd4dfd5); // Soft sage backdrop; ocean water material remains unchanged.
 
     const aspect = window.innerWidth / window.innerHeight;
     const frustumSize = 275;
@@ -872,6 +903,67 @@
     );
     terrainMeshExtreme.visible = false;
     reliefGroup.add(terrainMeshExtreme);
+
+    // 4A.1. VISUAL SOIL EROSION: runoff rills on rounded hills.
+    // Earth-colored ribbons are draped over the generated terrain and intensify with rain.
+    const erosionGroup = new THREE.Group();
+    reliefGroup.add(erosionGroup);
+    const erosionSedimentMaterial = new THREE.MeshLambertMaterial({
+      color: 0xb77943, transparent: true, opacity: 0,
+      depthWrite: false, side: THREE.DoubleSide
+    });
+    const erosionRillMaterial = new THREE.MeshLambertMaterial({
+      color: 0x704323, transparent: true, opacity: 0,
+      depthWrite: false, side: THREE.DoubleSide
+    });
+    function addErosionRibbon(path, baseWidth, material, yOffset) {
+      const curve = new THREE.CatmullRomCurve3(path.map(([x, z]) => new THREE.Vector3(x, 0, z)));
+      const points = curve.getPoints(42);
+      const positions = [];
+      const indices = [];
+      for (let i = 0; i < points.length; i++) {
+        const p = points[i];
+        const prev = points[Math.max(0, i - 1)];
+        const next = points[Math.min(points.length - 1, i + 1)];
+        let tx = next.x - prev.x;
+        let tz = next.z - prev.z;
+        const len = Math.max(0.001, Math.hypot(tx, tz));
+        tx /= len; tz /= len;
+        const nx = -tz, nz = tx;
+        const t = i / (points.length - 1);
+        // Small head cuts widen into a fan of exposed soil downhill.
+        const width = baseWidth * (0.32 + 0.9 * t);
+        const elevation = getTerrainGeography(p.x, p.z).elev;
+        const y = Math.max(0.8, elevation + yOffset);
+        positions.push(p.x + nx * width, y, p.z + nz * width);
+        positions.push(p.x - nx * width, y, p.z - nz * width);
+        if (i < points.length - 1) {
+          const a = i * 2;
+          indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+        }
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.renderOrder = 4;
+      erosionGroup.add(mesh);
+    }
+
+    // Multiple gullies run down the rounded upland slopes toward the lower floodplain.
+    const erosionPaths = [
+      [[-38, -51], [-35, -45], [-31, -39], [-26, -33], [-22, -28]],
+      [[-43, -48], [-47, -43], [-51, -37], [-54, -31], [-57, -26]],
+      [[-32, -49], [-27, -44], [-23, -39], [-19, -33], [-15, -28]],
+      [[-10, -58], [-14, -53], [-17, -48], [-19, -43], [-21, -39]],
+      [[35, -38], [39, -32], [43, -27], [48, -22], [51, -17]],
+      [[-64, -14], [-68, -9], [-72, -4], [-76, 1], [-79, 5]]
+    ];
+    erosionPaths.forEach(path => {
+      addErosionRibbon(path, 1.55, erosionSedimentMaterial, 0.42);
+      addErosionRibbon(path, 0.42, erosionRillMaterial, 0.58);
+    });
 
     // 4B. OCEAN / RIVER WATER PLANE (Clear Turquoise in 1944 vs High-Contrast Cobalt Blue in 24h Flood!)
     const waterGeo = new THREE.PlaneGeometry(WORLD_W * 10, WORLD_D * 10);
@@ -1045,6 +1137,15 @@
       const showFloodHighlight = isExtremeSide && state.layers.floodRisk && rainRatio > 0.08;
       terrainMeshNormal.visible = !showFloodHighlight;
       terrainMeshExtreme.visible = showFloodHighlight;
+
+      // Hillside soil loss starts with rainfall and becomes clearer as runoff intensifies.
+      const erosionStrength = isExtremeSide && state.layers.erosion
+        ? Math.max(0, Math.min(1, (rainRatio - 0.015) / 0.42))
+        : 0;
+      erosionGroup.visible = erosionStrength > 0.015;
+      erosionSedimentMaterial.opacity = erosionStrength * 0.72;
+      erosionRillMaterial.opacity = erosionStrength * 0.86;
+      erosionGroup.scale.set(1, 1, 1);
 
       // Water Level & Color (Vivid Cobalt Blue in 24h Flood instead of muddy brown!)
       waterMesh.position.y = floodLevel + Math.sin(timeSec * 2.0) * 0.1;
@@ -1607,7 +1708,7 @@
         btnNormal.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow-sm transition-all flex items-center gap-1.5';
         swipeBox.classList.add('hidden');
         SoundEngine.init();
-        SoundEngine.playBirdChirp();
+        SoundEngine.playSeagullCall();
       } else {
         btnExtreme.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-sm transition-all flex items-center gap-1.5';
         swipeBox.classList.add('hidden');
@@ -1850,7 +1951,8 @@
         layerFloodRisk: 'floodRisk',
         layerRelief: 'relief',
         layerGrid: 'grid',
-        layerWeather: 'weather'
+        layerWeather: 'weather',
+        layerErosion: 'erosion'
       };
       Object.entries(layerMap).forEach(([domId, key]) => {
         document.getElementById(domId).addEventListener('change', (e) => {
@@ -1944,7 +2046,7 @@
       const closeWelcome = () => {
         welcomeModal.classList.add('hidden');
         SoundEngine.init();
-        SoundEngine.playBirdChirp();
+        SoundEngine.playSeagullCall();
       };
       document.getElementById('btnOpenWelcome').addEventListener('click', () => welcomeModal.classList.remove('hidden'));
       document.getElementById('btnCloseModalTop').addEventListener('click', closeWelcome);
