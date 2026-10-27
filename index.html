@@ -586,13 +586,12 @@
           this.riverGain.gain.setTargetAtTime(0,now,0.15);
           this.rainGain.gain.setTargetAtTime(0,now,0.15);
           this.seaGain.gain.setTargetAtTime(0,now,0.15);
-          this.syncAmbientTimers(); return;
+          return;
         }
         const normal=state.viewMode==='normal', rainRatio=normal?0:(state.rainHours/24);
         this.riverGain.gain.setTargetAtTime(normal?0.007:0.012+rainRatio*0.018,now,0.25);
         this.rainGain.gain.setTargetAtTime(normal?0:rainRatio*0.035,now,0.25);
         this.seaGain.gain.setTargetAtTime(normal?0.018:0,now,0.8);
-        this.syncAmbientTimers();
       },
       playTone(freq=540,dur=0.07,type='sine',vol=0.05) {
         if(!this.enabled)return; this.init(); if(!this.ctx)return;
@@ -910,11 +909,13 @@
     reliefGroup.add(erosionGroup);
     const erosionSedimentMaterial = new THREE.MeshLambertMaterial({
       color: 0xb77943, transparent: true, opacity: 0,
-      depthWrite: false, side: THREE.DoubleSide
+      depthWrite: false, side: THREE.DoubleSide,
+      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1
     });
     const erosionRillMaterial = new THREE.MeshLambertMaterial({
       color: 0x704323, transparent: true, opacity: 0,
-      depthWrite: false, side: THREE.DoubleSide
+      depthWrite: false, side: THREE.DoubleSide,
+      polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2
     });
     function addErosionRibbon(path, baseWidth, material, yOffset) {
       const curve = new THREE.CatmullRomCurve3(path.map(([x, z]) => new THREE.Vector3(x, 0, z)));
@@ -961,8 +962,8 @@
       [[-64, -14], [-68, -9], [-72, -4], [-76, 1], [-79, 5]]
     ];
     erosionPaths.forEach(path => {
-      addErosionRibbon(path, 1.55, erosionSedimentMaterial, 0.42);
-      addErosionRibbon(path, 0.42, erosionRillMaterial, 0.58);
+      addErosionRibbon(path, 1.55, erosionSedimentMaterial, 0.11);
+      addErosionRibbon(path, 0.42, erosionRillMaterial, 0.17);
     });
 
     // 4B. OCEAN / RIVER WATER PLANE (Clear Turquoise in 1944 vs High-Contrast Cobalt Blue in 24h Flood!)
@@ -1715,6 +1716,7 @@
         SoundEngine.playThunder();
       }
       SoundEngine.updateWeatherAudio();
+      SoundEngine.syncAmbientTimers();
       updateSelectedPoiCard();
     }
 
@@ -2040,6 +2042,7 @@
         document.getElementById('soundIcon').textContent = SoundEngine.enabled ? '🔊' : '🔇';
         document.getElementById('soundLabel').textContent = SoundEngine.enabled ? 'Som Ativo' : 'Sem Som';
         SoundEngine.updateWeatherAudio();
+        SoundEngine.syncAmbientTimers();
       });
 
       const welcomeModal = document.getElementById('welcomeModal');
