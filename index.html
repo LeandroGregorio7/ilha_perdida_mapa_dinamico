@@ -612,37 +612,48 @@
         this.init();
         if (!this.ctx) return;
         const now = this.ctx.currentTime;
-        // Synthetic gull cries: slightly rough, descending two-part calls with a wavering pitch.
+        // Gull-like cries layer soft pitch glides with filtered noise for a raspy, airy call.
         const phrases = [
-          { start: 0,    freq: 980, end: 690, dur: 0.31 },
-          { start: 0.22, freq: 760, end: 560, dur: 0.37 },
-          { start: 0.82, freq: 1040, end: 720, dur: 0.28 },
-          { start: 1.04, freq: 790, end: 570, dur: 0.40 }
+          { start: 0.00, freq: 1280, end: 900, dur: 0.42, level: 0.023 },
+          { start: 0.26, freq: 960, end: 720, dur: 0.48, level: 0.020 },
+          { start: 0.95, freq: 1380, end: 930, dur: 0.38, level: 0.021 },
+          { start: 1.18, freq: 1000, end: 700, dur: 0.50, level: 0.018 }
         ];
-        phrases.forEach((p, i) => {
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          const wobble = this.ctx.createOscillator();
-          const wobbleGain = this.ctx.createGain();
-          const t0 = now + p.start + Math.random() * 0.035;
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(p.freq * (0.92 + Math.random() * 0.16), t0);
-          osc.frequency.exponentialRampToValueAtTime(p.end, t0 + p.dur);
-          wobble.type = 'sine';
-          wobble.frequency.value = 7 + Math.random() * 2.5;
-          wobbleGain.gain.value = 16 + Math.random() * 12;
-          wobble.connect(wobbleGain);
-          wobbleGain.connect(osc.frequency);
-          gain.gain.setValueAtTime(0.0001, t0);
-          gain.gain.linearRampToValueAtTime(i % 2 === 0 ? 0.035 : 0.027, t0 + 0.035);
-          gain.gain.setTargetAtTime(0.012, t0 + p.dur * 0.48, 0.06);
-          gain.gain.exponentialRampToValueAtTime(0.0001, t0 + p.dur);
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-          wobble.start(t0);
-          osc.start(t0);
-          osc.stop(t0 + p.dur + 0.02);
-          wobble.stop(t0 + p.dur + 0.02);
+        phrases.forEach(p => {
+          const t0 = now + p.start + Math.random() * 0.045;
+          const tone = this.ctx.createOscillator();
+          const toneGain = this.ctx.createGain();
+          const toneFilter = this.ctx.createBiquadFilter();
+          tone.type = 'sine';
+          tone.frequency.setValueAtTime(p.freq, t0);
+          tone.frequency.exponentialRampToValueAtTime(p.end, t0 + p.dur);
+          toneFilter.type = 'bandpass';
+          toneFilter.frequency.setValueAtTime(p.freq * 0.92, t0);
+          toneFilter.frequency.exponentialRampToValueAtTime(p.end * 1.25, t0 + p.dur);
+          toneFilter.Q.value = 1.6;
+          toneGain.gain.setValueAtTime(0.0001, t0);
+          toneGain.gain.linearRampToValueAtTime(p.level, t0 + 0.055);
+          toneGain.gain.exponentialRampToValueAtTime(0.0001, t0 + p.dur);
+          tone.connect(toneFilter); toneFilter.connect(toneGain); toneGain.connect(this.ctx.destination);
+          tone.start(t0); tone.stop(t0 + p.dur + 0.025);
+          const noiseLength = Math.max(1, Math.floor(this.ctx.sampleRate * (p.dur + 0.04)));
+          const noiseBuffer = this.ctx.createBuffer(1, noiseLength, this.ctx.sampleRate);
+          const noiseData = noiseBuffer.getChannelData(0);
+          for (let n = 0; n < noiseLength; n++) noiseData[n] = (Math.random() * 2 - 1) * (0.7 + 0.3 * Math.sin(Math.PI * n / noiseLength));
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = noiseBuffer;
+          const band = this.ctx.createBiquadFilter();
+          band.type = 'bandpass';
+          band.frequency.setValueAtTime(p.freq * 1.18, t0);
+          band.frequency.exponentialRampToValueAtTime(p.end * 1.15, t0 + p.dur);
+          band.Q.value = 2.3;
+          const rasp = this.ctx.createGain();
+          rasp.gain.setValueAtTime(0.0001, t0);
+          rasp.gain.linearRampToValueAtTime(0.012, t0 + 0.045);
+          rasp.gain.setTargetAtTime(0.006, t0 + p.dur * 0.35, 0.08);
+          rasp.gain.exponentialRampToValueAtTime(0.0001, t0 + p.dur);
+          noise.connect(band); band.connect(rasp); rasp.connect(this.ctx.destination);
+          noise.start(t0); noise.stop(t0 + p.dur + 0.025);
         });
       }
     };
@@ -667,11 +678,11 @@
       activeTool: 'pan',
       cameraAngle: Math.PI * 0.42, // Panoramic front-angle view like reference image_442059.jpg
       cameraPitch: 0.64,
-      cameraZoom: 0.86,            // Show the island larger while retaining its full coastline.
-      cameraTarget: { x: 0, z: 4 },
+      cameraZoom: 0.82,            // Keep the new northern bank and island in the opening frame.
+      cameraTarget: { x: -5, z: 0 },
       targetCameraAngle: Math.PI * 0.42,
-      targetCameraZoom: 0.86,
-      targetCameraCenter: { x: 0, z: 4 },
+      targetCameraZoom: 0.82,
+      targetCameraCenter: { x: -5, z: 0 },
       layers: {
         forest: true,
         markers: true,
@@ -784,6 +795,12 @@
                          0.021 * Math.cos(wz * 0.105) +
                          0.014 * Math.sin((wx + wz) * 0.16);
       const islandDist = Math.hypot((wx + 2) / 151, (wz + 1) / 101) + coastNoise;
+      // Connect a northern continental bank to the northwest coast, replacing detached islets.
+      const northBankNoise = 0.018 * Math.sin(wx * 0.11) +
+                             0.014 * Math.cos(wz * 0.13) +
+                             0.012 * Math.sin((wx - wz) * 0.09);
+      const northBankDist = Math.hypot((wx + 98) / 52, (wz + 102) / 36) + northBankNoise;
+      const landDist = Math.min(islandDist, northBankDist);
 
       // Main Paraíba do Sul channel: narrowed by about one third versus the earlier version.
       const riverX = -5 + (wz + 82) * 0.20 + Math.sin((wz + 10) * 0.045) * 8;
@@ -797,12 +814,12 @@
       const tributaryHalfW = 2.45;
       const inTributary = westTributaryDist < tributaryHalfW || eastTributaryDist < tributaryHalfW;
 
-      if (islandDist >= 1.0 || inMainRiver || inTributary) {
-        const inWatercourse = islandDist < 1.0 && (inMainRiver || inTributary);
-        return { elev: -2.0, zone: inWatercourse ? 'river' : 'water', coastDist: islandDist };
+      if (landDist >= 1.0 || inMainRiver || inTributary) {
+        const inWatercourse = landDist < 1.0 && (inMainRiver || inTributary);
+        return { elev: -2.0, zone: inWatercourse ? 'river' : 'water', coastDist: landDist };
       }
 
-      const edgeFactor = Math.max(0, 1.0 - islandDist);
+      const edgeFactor = Math.max(0, 1.0 - landDist);
       const mainClearance = Math.max(0, distanceToRiver - riverHalfW);
       const westClearance = Math.max(0, westTributaryDist - tributaryHalfW);
       const eastClearance = Math.max(0, eastTributaryDist - tributaryHalfW);
@@ -817,7 +834,8 @@
         { cx: 35, cz: -35, rx: 29, rz: 23, peak: 12.5 },
         { cx: 27, cz: -5, rx: 25, rz: 22, peak: 7.0 },
         { cx: -101, cz: -27, rx: 26, rz: 22, peak: 6.5 },
-        { cx: 87, cz: -7, rx: 24, rz: 24, peak: 5.8 }
+        { cx: 87, cz: -7, rx: 24, rz: 24, peak: 5.8 },
+        { cx: -105, cz: -99, rx: 33, rz: 25, peak: 7.2 }
       ];
       for (const hill of roundedHills) {
         const d = Math.hypot((wx - hill.cx) / hill.rx, (wz - hill.cz) / hill.rz);
@@ -958,8 +976,10 @@
       polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2
     });
     function addErosionRibbon(path, baseWidth, material, yOffset) {
-      const curve = new THREE.CatmullRomCurve3(path.map(([x, z]) => new THREE.Vector3(x, 0, z)));
-      const points = curve.getPoints(42);
+      const curve = new THREE.CatmullRomCurve3(
+        path.map(([x, z]) => new THREE.Vector3(x, 0, z)), false, 'centripetal'
+      );
+      const points = curve.getPoints(64);
       const positions = [];
       const indices = [];
       for (let i = 0; i < points.length; i++) {
@@ -972,10 +992,13 @@
         tx /= len; tz /= len;
         const nx = -tz, nz = tx;
         const t = i / (points.length - 1);
-        // Small head cuts widen into a fan of exposed soil downhill.
-        const width = baseWidth * (0.32 + 0.9 * t);
-        const yLeft = Math.max(0.8, getTerrainGeography(p.x + nx * width, p.z + nz * width).elev + yOffset);
-        const yRight = Math.max(0.8, getTerrainGeography(p.x - nx * width, p.z - nz * width).elev + yOffset);
+        // Fine channels start narrowly and widen downhill with gentle bank irregularity.
+        const taper = 0.24 + 0.78 * Math.pow(t, 0.72);
+        const bankVariation = 0.94 + 0.06 * Math.sin(p.x * 0.7 + p.z * 0.5);
+        const width = baseWidth * taper * bankVariation * (0.72 + 0.28 * Math.sin(Math.PI * t));
+        const lift = yOffset + 0.05 * Math.sin(Math.PI * t);
+        const yLeft = Math.max(0.82, getTerrainGeography(p.x + nx * width, p.z + nz * width).elev + lift);
+        const yRight = Math.max(0.82, getTerrainGeography(p.x - nx * width, p.z - nz * width).elev + lift);
         positions.push(p.x + nx * width, yLeft, p.z + nz * width);
         positions.push(p.x - nx * width, yRight, p.z - nz * width);
         if (i < points.length - 1) {
@@ -1071,28 +1094,31 @@
     const rayGeo = new THREE.BufferGeometry();
     rayGeo.setAttribute('position', new THREE.Float32BufferAttribute(rayPositions, 3));
     sunGroup.add(new THREE.LineSegments(rayGeo, new THREE.LineBasicMaterial({ color: 0xffd35a, transparent: true, opacity: 0.85 })));
-    sunGroup.position.set(-123, 58, -72);
+    sunGroup.scale.setScalar(1.58);
+    sunGroup.position.set(-122, 112, -86);
     atmosphereGroup.add(sunGroup);
 
     const cloudGroup = new THREE.Group();
-    const cloudGeometry = new THREE.SphereGeometry(6.4, 8, 6);
-    const cloudMaterial = new THREE.MeshLambertMaterial({ color: 0x64748b, transparent: true, opacity: 0.55, depthWrite: false });
+    const cloudGeometry = new THREE.SphereGeometry(7.3, 10, 7);
+    const cloudMaterial = new THREE.MeshLambertMaterial({ color: 0x475569, transparent: true, opacity: 0.58, depthWrite: false });
     const cloudSeeds = [
-      { x: -115, y: 43, z: -74, scale: 1.00 },
-      { x: -36, y: 49, z: -88, scale: 1.12 },
-      { x: 48, y: 42, z: -76, scale: 0.92 }
+      { x: -125, y: 62, z: -82, scale: 1.12 },
+      { x: -64, y: 68, z: -91, scale: 1.18 },
+      { x: 4, y: 61, z: -82, scale: 1.12 },
+      { x: 76, y: 66, z: -88, scale: 1.08 }
     ];
     cloudSeeds.forEach((seed, idx) => {
       const cloud = new THREE.Group();
-      [[-5, 0, 0, 0.82], [0, 2.0, 0, 1.0], [5.0, 0.3, 0, 0.78], [1.5, -1.0, 3.1, 0.68]].forEach(([x, y, z, sc]) => {
+      [[-6.5, 0, 0, 0.86], [-2.2, 2.2, 0, 1.0], [3.2, 0.7, 0, 0.92], [7.0, -0.8, 2.8, 0.72], [1.4, 1.1, -3.0, 0.76]].forEach(([x, y, z, sc]) => {
         const puff = new THREE.Mesh(cloudGeometry, cloudMaterial);
         puff.position.set(x * seed.scale, y * seed.scale, z * seed.scale);
-        puff.scale.set(sc * seed.scale, sc * 0.68 * seed.scale, sc * seed.scale);
+        puff.scale.set(sc * seed.scale, sc * 0.72 * seed.scale, sc * seed.scale);
         cloud.add(puff);
       });
+      cloud.scale.setScalar(1.2);
       cloud.position.set(seed.x, seed.y, seed.z);
       cloud.userData.baseX = seed.x;
-      cloud.userData.phase = idx * 1.7;
+      cloud.userData.phase = idx * 1.35;
       cloudGroup.add(cloud);
     });
     atmosphereGroup.add(cloudGroup);
@@ -1251,7 +1277,7 @@
         new THREE.Vector2(0.98, 0.8), new THREE.Vector2(0.72, 2.3),
         new THREE.Vector2(0.42, 3.25), new THREE.Vector2(0.08, 3.8)
       ], 9);
-      hullGeo.rotateZ(Math.PI / 2);
+      hullGeo.rotateX(Math.PI / 2);
       const hull = new THREE.Mesh(hullGeo, new THREE.MeshLambertMaterial({ color: 0x9a4c22, flatShading: true }));
       hull.scale.x = 0.62;
       hull.position.y = 0.5;
@@ -1259,13 +1285,15 @@
       const seatMat = new THREE.MeshLambertMaterial({ color: 0xd6a56b });
       const darkWoodMat = new THREE.MeshLambertMaterial({ color: 0x63351f });
       const edgeMat = new THREE.MeshLambertMaterial({ color: 0xc88745 });
-      [-1.15, 1.15].forEach(x => {
-        const seat = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.16, 1.3), seatMat);
-        seat.position.set(x, 0.82, 0);
+      [-1.15, 1.15].forEach(z => {
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.16, 0.24), seatMat);
+        seat.position.set(0, 0.82, z);
         canoeGroup.add(seat);
-        const seatSupport = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.34, 0.16), darkWoodMat);
-        seatSupport.position.set(x, 0.66, -0.45);
-        canoeGroup.add(seatSupport);
+        [-0.42, 0.42].forEach(x => {
+          const seatSupport = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.34, 0.16), darkWoodMat);
+          seatSupport.position.set(x, 0.64, z);
+          canoeGroup.add(seatSupport);
+        });
       });
       // Raised gunwales, warm timber trim and a visible keel make the canoe read as a crafted boat.
       [-0.48, 0.48].forEach(x => {
@@ -1277,17 +1305,18 @@
       keel.position.set(0, 0.32, 0);
       canoeGroup.add(keel);
       // Two paddles placed diagonally across the seats.
-      [-0.95, 0.95].forEach((x, i) => {
-        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 4.2, 6), seatMat);
+      [-1.25, 1.25].forEach((z, i) => {
+        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 4.8, 6), seatMat);
         shaft.rotation.z = Math.PI / 2;
-        shaft.rotation.y = i === 0 ? -0.22 : 0.22;
-        shaft.position.set(x, 1.02, i === 0 ? -0.15 : 0.25);
+        shaft.rotation.y = i === 0 ? -0.13 : 0.13;
+        shaft.position.set(0, 1.02, z);
         canoeGroup.add(shaft);
-        const blade = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.82), edgeMat);
-        blade.position.set(x + (i === 0 ? -1.95 : 1.95), 1.02, i === 0 ? -0.6 : 0.7);
-        blade.rotation.y = i === 0 ? -0.22 : 0.22;
+        const blade = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.12, 0.18), edgeMat);
+        blade.position.set(i === 0 ? -2.55 : 2.55, 1.02, z + (i === 0 ? -0.18 : 0.18));
+        blade.rotation.y = i === 0 ? -0.13 : 0.13;
         canoeGroup.add(blade);
       });
+      canoeGroup.scale.setScalar(1.34);
       structuresGroup.add(canoeGroup);
     })();
 
@@ -1474,25 +1503,46 @@
           const win = new THREE.Mesh(new THREE.BoxGeometry(0.62*scale, 0.6*scale, 0.1*scale), winMat);
           win.position.set(wx*scale, 1.55*scale, 1.87*scale); g.add(win);
         });
-        g.position.set(x, 0.3, z); parent.add(g);
+        g.position.set(x, getTerrainGeography(x, z).elev, z); parent.add(g);
       }
-      function islet(x, z, rx, rz, houses) {
-        const island = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8), landMat);
-        island.scale.set(rx, 1.4, rz); island.position.set(x, 0.15, z); northHamletsGroup.add(island);
-        const beach = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8), sandMat);
-        beach.scale.set(rx*0.82, 0.42, rz*0.82); beach.position.set(x, 0.55, z); northHamletsGroup.add(beach);
-        const top = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8), landMat);
-        top.scale.set(rx*0.74, 0.72, rz*0.74); top.position.set(x, 0.76, z); northHamletsGroup.add(top);
-        houses.forEach(h => hamletHouse(northHamletsGroup, x+h[0], z+h[1], h[2], h[3]));
-        const fenceZ = z + rz*0.45;
-        for (let i=0; i<5; i++) {
-          const post = new THREE.Mesh(new THREE.BoxGeometry(0.15,0.8,0.15),woodMat);
-          post.position.set(x-rx*0.45+i*rx*0.22, 0.9, fenceZ); northHamletsGroup.add(post);
-        }
+      function hamletYard(x, z, width, depth) {
+        const yard = new THREE.Group();
+        yard.position.set(x, getTerrainGeography(x, z).elev, z);
+        northHamletsGroup.add(yard);
+        const points = [
+          [-width/2, -depth/2], [width/2, -depth/2],
+          [width/2, depth/2], [-width/2, depth/2]
+        ];
+        points.forEach(([px,pz]) => {
+          const post = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.9, 0.17), woodMat);
+          post.position.set(px, 0.45, pz); yard.add(post);
+        });
+        const sides = [
+          [-width/2,-depth/2,width/2,-depth/2],
+          [width/2,-depth/2,width/2,depth/2],
+          [width/2,depth/2,2.4,depth/2],
+          [-2.4,depth/2,-width/2,depth/2],
+          [-width/2,depth/2,-width/2,-depth/2]
+        ];
+        sides.forEach(([x1,z1,x2,z2]) => {
+          const dx=x2-x1, dz=z2-z1, length=Math.hypot(dx,dz);
+          [0.32,0.72].forEach(y => {
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(0.12,0.12,length), woodMat);
+            rail.position.set((x1+x2)/2,y,(z1+z2)/2);
+            rail.rotation.y=Math.atan2(dx,dz);
+            yard.add(rail);
+          });
+        });
       }
-      islet(-92, -109, 15, 7.5, [[-4, -1, 0.95, 0x9b4338],[4, 1, 0.72, 0xb4533c]]);
-      islet(-38, -113, 12, 6.5, [[0, 0, 0.88, 0x7c3f32]]);
-      islet(20, -108, 14, 7, [[-3, 0, 0.82, 0x9b4338],[4, -1, 0.68, 0xb4533c]]);
+      function settlement(x, z, scale, roofColor, yardWidth, yardDepth) {
+        hamletHouse(northHamletsGroup, x, z, scale, roofColor);
+        hamletYard(x, z, yardWidth, yardDepth);
+      }
+      settlement(-128, -107, 0.88, 0x9b4338, 12, 10);
+      settlement(-110, -91, 0.96, 0xb4533c, 13, 11);
+      settlement(-91, -108, 0.82, 0x7c3f32, 11, 9);
+      settlement(-73, -91, 0.88, 0x9b4338, 12, 10);
+      settlement(-58, -83, 0.72, 0xb4533c, 10, 8);
     })();
 
     const customStamps3DGroup = new THREE.Group();
