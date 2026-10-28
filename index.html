@@ -753,6 +753,14 @@
       [[146, 36], [120, 35], [95, 33], [71, 31], [48, 30], [25, 30]]
     ];
 
+    // A fine feeder creek crosses only the northwest upland and joins the western tributary.
+    // Its dedicated width keeps it visibly narrower than the main river and never splits the island.
+    const SMALL_NORTH_CREEK = [
+      [-126, -115], [-121, -105], [-115, -96],
+      [-109, -85], [-108, -73], [-114, -62],
+      [-124, -52], [-134, -45], [-139, -42]
+    ];
+
     function distanceToPolyline(wx, wz, path) {
       let minDistSq = Infinity;
       for (let i = 0; i < path.length - 1; i++) {
@@ -792,9 +800,12 @@
       const eastTributaryDist = distanceToPolyline(wx, wz, TRIBUTARY_PATHS[1]);
       const tributaryHalfW = 2.45;
       const inTributary = westTributaryDist < tributaryHalfW || eastTributaryDist < tributaryHalfW;
+      const northCreekDist = distanceToPolyline(wx, wz, SMALL_NORTH_CREEK);
+      const northCreekHalfW = 1.55;
+      const inNorthCreek = northCreekDist < northCreekHalfW;
 
-      if (landDist >= 1.0 || inMainRiver || inTributary) {
-        const inWatercourse = landDist < 1.0 && (inMainRiver || inTributary);
+      if (landDist >= 1.0 || inMainRiver || inTributary || inNorthCreek) {
+        const inWatercourse = landDist < 1.0 && (inMainRiver || inTributary || inNorthCreek);
         return { elev: -2.0, zone: inWatercourse ? 'river' : 'water', coastDist: landDist };
       }
 
@@ -802,7 +813,8 @@
       const mainClearance = Math.max(0, distanceToRiver - riverHalfW);
       const westClearance = Math.max(0, westTributaryDist - tributaryHalfW);
       const eastClearance = Math.max(0, eastTributaryDist - tributaryHalfW);
-      const riverClearance = Math.min(mainClearance, westClearance, eastClearance);
+      const northCreekClearance = Math.max(0, northCreekDist - northCreekHalfW);
+      const riverClearance = Math.min(mainClearance, westClearance, eastClearance, northCreekClearance);
       const riverBankTaper = Math.min(1.0, Math.max(0.12, riverClearance / 15));
       let h = 0.55 + Math.min(1.0, edgeFactor * 2.7) * 4.1 * riverBankTaper;
 
