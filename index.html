@@ -533,13 +533,19 @@
     const SoundEngine = {
       ctx: null, enabled: true, ambientStarted: false,
       rainGain: null, riverGain: null, seaGain: null,
-      gullTimer: null, surfTimer: null,
+      gullTimer: null, surfTimer: null, gullAudio: null,
       init() {
         if (!this.ctx) {
           const AudioCtx = window.AudioContext || window.webkitAudioContext;
           if (!AudioCtx) return;
           this.ctx = new AudioCtx();
           this.setupAmbient();
+        }
+        if (!this.gullAudio) {
+          // Natural Herring Gull recording, public-domain audio hosted by Wikimedia Commons.
+          this.gullAudio = new Audio('https://upload.wikimedia.org/wikipedia/commons/4/43/Gull_1.ogg');
+          this.gullAudio.preload = 'auto';
+          this.gullAudio.volume = 0.18;
         }
         if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
       },
@@ -610,51 +616,24 @@
       playSeagullCall() {
         if (!this.enabled || state.viewMode !== 'normal') return;
         this.init();
-        if (!this.ctx) return;
-        const now = this.ctx.currentTime;
-        // Gull-like cries layer soft pitch glides with filtered noise for a raspy, airy call.
-        const phrases = [
-          { start: 0.00, freq: 1280, end: 900, dur: 0.42, level: 0.023 },
-          { start: 0.26, freq: 960, end: 720, dur: 0.48, level: 0.020 },
-          { start: 0.95, freq: 1380, end: 930, dur: 0.38, level: 0.021 },
-          { start: 1.18, freq: 1000, end: 700, dur: 0.50, level: 0.018 }
-        ];
-        phrases.forEach(p => {
-          const t0 = now + p.start + Math.random() * 0.045;
-          const tone = this.ctx.createOscillator();
-          const toneGain = this.ctx.createGain();
-          const toneFilter = this.ctx.createBiquadFilter();
-          tone.type = 'sine';
-          tone.frequency.setValueAtTime(p.freq, t0);
-          tone.frequency.exponentialRampToValueAtTime(p.end, t0 + p.dur);
-          toneFilter.type = 'bandpass';
-          toneFilter.frequency.setValueAtTime(p.freq * 0.92, t0);
-          toneFilter.frequency.exponentialRampToValueAtTime(p.end * 1.25, t0 + p.dur);
-          toneFilter.Q.value = 1.6;
-          toneGain.gain.setValueAtTime(0.0001, t0);
-          toneGain.gain.linearRampToValueAtTime(p.level, t0 + 0.055);
-          toneGain.gain.exponentialRampToValueAtTime(0.0001, t0 + p.dur);
-          tone.connect(toneFilter); toneFilter.connect(toneGain); toneGain.connect(this.ctx.destination);
-          tone.start(t0); tone.stop(t0 + p.dur + 0.025);
-          const noiseLength = Math.max(1, Math.floor(this.ctx.sampleRate * (p.dur + 0.04)));
-          const noiseBuffer = this.ctx.createBuffer(1, noiseLength, this.ctx.sampleRate);
-          const noiseData = noiseBuffer.getChannelData(0);
-          for (let n = 0; n < noiseLength; n++) noiseData[n] = (Math.random() * 2 - 1) * (0.7 + 0.3 * Math.sin(Math.PI * n / noiseLength));
-          const noise = this.ctx.createBufferSource();
-          noise.buffer = noiseBuffer;
-          const band = this.ctx.createBiquadFilter();
-          band.type = 'bandpass';
-          band.frequency.setValueAtTime(p.freq * 1.18, t0);
-          band.frequency.exponentialRampToValueAtTime(p.end * 1.15, t0 + p.dur);
-          band.Q.value = 2.3;
-          const rasp = this.ctx.createGain();
-          rasp.gain.setValueAtTime(0.0001, t0);
-          rasp.gain.linearRampToValueAtTime(0.012, t0 + 0.045);
-          rasp.gain.setTargetAtTime(0.006, t0 + p.dur * 0.35, 0.08);
-          rasp.gain.exponentialRampToValueAtTime(0.0001, t0 + p.dur);
-          noise.connect(band); band.connect(rasp); rasp.connect(this.ctx.destination);
-          noise.start(t0); noise.stop(t0 + p.dur + 0.025);
-        });
+        const gull = this.gullAudio;
+        if (!gull || !this.ctx || !gull.paused || gull.readyState < 2) return;
+        const maxStart = Number.isFinite(gull.duration) ? Math.max(0, gull.duration - 2.8) : 0;
+        try {
+          // Play a short, varied excerpt rather than looping the full recording continuously.
+          gull.currentTime = Math.random() * maxStart;
+          gull.volume = 0.18;
+          const playRequest = gull.play();
+          if (playRequest && typeof playRequest.then === 'function') {
+            playRequest.then(() => {
+              window.setTimeout(() => { if (!gull.paused) gull.pause(); }, 2600);
+            }).catch(() => {});
+          } else {
+            window.setTimeout(() => { if (!gull.paused) gull.pause(); }, 2600);
+          }
+        } catch (e) {
+          console.warn('Não foi possível reproduzir a gravação da gaivota:', e);
+        }
       }
     };
 
